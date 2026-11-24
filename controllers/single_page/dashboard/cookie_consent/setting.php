@@ -39,6 +39,43 @@ class Setting extends CookieConsent
         $this->set('_tokenDelete', $this->token->generate('cookie_consent_delete'));
         $this->set('_tokenSettings', $this->token->generate('cookie_consent_settings'));
         $this->set('_consentCookieSettings', $this->kosdesign->getConsentCookieSettings());
+        $this->set('_consentModeSettings', $this->kosdesign->getConsentModeSettings());
+        $this->set('_tokenConsentMode', $this->token->generate('cookie_consent_mode'));
+    }
+
+    public function save_consent_mode()
+    {
+        $token = $this->post('token');
+        if (!$this->token->validate('cookie_consent_mode', $token)) {
+            $this->flash('error', $this->token->getErrorMessage());
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
+        $waitForUpdate = trim((string) $this->post('consent_mode_wait_for_update'));
+        if ($waitForUpdate === '') {
+            $waitForUpdate = (string) CookieConsentService::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE;
+        }
+
+        if (!preg_match('/^\d+$/', $waitForUpdate) || (int) $waitForUpdate > CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE) {
+            $this->flash('error', t('Wait for update must be a whole number of milliseconds between 0 and %s.', CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE));
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
+        try {
+            $this->kosdesign->saveConsentModeSettings([
+                'enabled' => (bool) $this->post('consent_mode_enabled'),
+                'wait_for_update' => (int) $waitForUpdate,
+                'ads_data_redaction' => (bool) $this->post('consent_mode_ads_data_redaction'),
+                'url_passthrough' => (bool) $this->post('consent_mode_url_passthrough'),
+            ]);
+            $this->flash('success', t('Consent Mode settings saved.'));
+        } catch (\Throwable $e) {
+            $this->flash('error', t('Unable to save Consent Mode settings right now.'));
+        }
+
+        return $this->redirect('/dashboard/cookie_consent/setting');
     }
 
     public function save_preferences()
@@ -133,12 +170,14 @@ class Setting extends CookieConsent
     {
         $this->set('_type', 'add');
         $this->set('_token', $this->token->generate('cookie_consent_add'));
+        $this->set('_consentModeSignals', $this->kosdesign->getConsentModeSignals());
     }
 
     public function edit($id = null)
     {
         $this->set('_type', 'edit');
         $this->set('_token', $this->token->generate('cookie_consent_edit'));
+        $this->set('_consentModeSignals', $this->kosdesign->getConsentModeSignals());
 
         if ($id === null) {
             return $this->redirect($this->kosdesign->getLink());
@@ -163,6 +202,8 @@ class Setting extends CookieConsent
         $managedCookieNamesRaw = isset($post['managed_cookie_names']) ? (string) $post['managed_cookie_names'] : '';
         $managedCookieDomainRaw = isset($post['managed_cookie_domain']) ? (string) $post['managed_cookie_domain'] : '';
         $managedCookiePathRaw = isset($post['managed_cookie_path']) ? (string) $post['managed_cookie_path'] : CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT;
+        $consentModeTypes = $this->kosdesign->sanitizeConsentModeTypes(isset($post['consent_mode_types']) ? $post['consent_mode_types'] : []);
+        $codeAlwaysLoad = !empty($post['code_always_load']) ? 1 : 0;
 
         if (($id === null && !$this->token->validate('cookie_consent_add', $postedToken)) || ($id !== null && !$this->token->validate('cookie_consent_edit', $postedToken))) {
             $this->error->add($this->token->getErrorMessage());
@@ -209,6 +250,7 @@ class Setting extends CookieConsent
                 $this->set('id', $id);
             }
             $this->set('_token', $this->token->generate($id !== null ? 'cookie_consent_edit' : 'cookie_consent_add'));
+            $this->set('_consentModeSignals', $this->kosdesign->getConsentModeSignals());
             $this->set('error', $this->error);
             return;
         }
@@ -243,13 +285,13 @@ class Setting extends CookieConsent
             }
 
             if ($id !== null) {
-                $saved = $this->kosdesign->DBUpdateCookie($id, $name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath);
+                $saved = $this->kosdesign->DBUpdateCookie($id, $name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes, $codeAlwaysLoad);
                 if (!$saved) {
                     throw new Exception('Can not update cookie. Please try again.');
                 }
                 $cookieId = $id;
             } else {
-                $cookieId = $this->kosdesign->DBInsertCookie($name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath);
+                $cookieId = $this->kosdesign->DBInsertCookie($name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes, $codeAlwaysLoad);
                 if ($cookieId === null) {
                     throw new Exception('Can not create cookie. Please try again.');
                 }

@@ -88,14 +88,16 @@ class CookieConsentApiController
                 $code['footer'] = !empty($log['code']['footer']) ? $log['code']['footer'] : [];
             }
 
+            $consentIds = !empty($log['code']['id']) ? array_map('intval', $log['code']['id']) : [];
             $response = $this->jsonResponse([
                 'status' => 1,
                 'message' => t('Saved.'),
                 'saved' => !empty($log['saved']),
                 'consent_id' => $payload['consent_id'],
                 'version' => $consentVersion,
-                'consent' => !empty($log['code']['id']) ? array_map('intval', $log['code']['id']) : [],
-                'code' => $code,
+                'consent' => $consentIds,
+                'code' => $this->mergeAlwaysLoadCode($code, $siteId),
+                'consent_mode' => $this->buildConsentModePayload($siteId, $consentIds, !empty($log['saved'])),
                 'cookie_max_age' => $cookieMaxAge,
                 'managed_cookie_cleanup' => $managedCookieCleanup,
             ], 200);
@@ -140,19 +142,49 @@ class CookieConsentApiController
             $code['footer'] = !empty($log['code']['footer']) ? $log['code']['footer'] : [];
         }
 
+        $consentIds = !empty($log['code']['id']) ? array_map('intval', $log['code']['id']) : [];
         $response = $this->jsonResponse([
             'status' => 1,
             'saved' => !empty($log['saved']),
             'consent_id' => $consentId,
             'version' => $consentVersion,
-            'consent' => !empty($log['code']['id']) ? array_map('intval', $log['code']['id']) : [],
+            'consent' => $consentIds,
             'token' => $this->app->make('token')->generate(self::TOKEN_ACTION),
-            'code' => $code,
+            'code' => $this->mergeAlwaysLoadCode($code, $siteId),
+            'consent_mode' => $this->buildConsentModePayload($siteId, $consentIds, !empty($log['saved'])),
             'cookie_max_age' => $cookieMaxAge,
             'managed_cookie_cleanup' => $managedCookieCleanup,
         ], 200);
 
         return $this->addConsentCookies($response, $consentId, !empty($log['saved']) ? $consentVersion : null, !empty($log['saved']));
+    }
+
+    protected function buildConsentModePayload($siteId, array $consentIds, $saved)
+    {
+        if (!$this->cookieConsent->isConsentModeEnabled()) {
+            return ['enabled' => false];
+        }
+
+        return [
+            'enabled' => true,
+            'saved' => (bool) $saved,
+            'state' => $this->cookieConsent->getConsentModeState($siteId, $saved ? $consentIds : []),
+        ];
+    }
+
+    protected function mergeAlwaysLoadCode(array $code, $siteId)
+    {
+        if (!$this->cookieConsent->isConsentModeEnabled()) {
+            return $code;
+        }
+
+        $always = $this->cookieConsent->getAlwaysLoadCode($siteId);
+        foreach (['header', 'body', 'footer'] as $position) {
+            $current = isset($code[$position]) && is_array($code[$position]) ? $code[$position] : [];
+            $code[$position] = array_values(array_unique(array_merge($always[$position], $current)));
+        }
+
+        return $code;
     }
 
     protected function getRequestData()

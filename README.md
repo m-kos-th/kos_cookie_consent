@@ -221,3 +221,12 @@ The `state` response is sent with `no-store` headers to reduce cache-related con
 - Changing cookie retention updates the consent-cookie max-age used by later state/save responses.
 - Withdrawing previously granted consent clears the configured first-party cookies for the revoked categories.
 - Logs and export show `Consent ID`, `IP Address`, and consent version correctly.
+
+## Google Consent Mode V2
+
+Requires concrete5 8.5.7+ and PHP 7.4+.
+
+1. Upgrade the package, then open **Dashboard > Cookie Consent > Setting** and enable *Consent Mode V2*.
+2. Edit each cookie category and tick the signals it controls (for Google: `analytics_storage` for analytics, `ad_storage` + `ad_user_data` + `ad_personalization` for ads).
+3. Put the GTM/gtag loader in a category with *Load the tracking codes on every page* checked, so tags can read the default/update signals.
+4. Verify in the browser: `dataLayer` shows `consent default` (denied) first, then `consent update` after the visitor chooses.

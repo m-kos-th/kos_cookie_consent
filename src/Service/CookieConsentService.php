@@ -26,6 +26,21 @@ class CookieConsentService
     const MIN_CONSENT_COOKIE_LIFETIME_DAYS = 1;
     const MAX_CONSENT_COOKIE_LIFETIME_DAYS = 400;
     const MANAGED_COOKIE_PATH_DEFAULT = '/';
+    const SETTING_CONSENT_MODE_ENABLED = 'consent_mode_enabled';
+    const SETTING_CONSENT_MODE_WAIT_FOR_UPDATE = 'consent_mode_wait_for_update';
+    const SETTING_CONSENT_MODE_ADS_DATA_REDACTION = 'consent_mode_ads_data_redaction';
+    const SETTING_CONSENT_MODE_URL_PASSTHROUGH = 'consent_mode_url_passthrough';
+    const DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE = 500;
+    const MAX_CONSENT_MODE_WAIT_FOR_UPDATE = 10000;
+    const CONSENT_MODE_SIGNALS = [
+        'ad_storage',
+        'analytics_storage',
+        'ad_user_data',
+        'ad_personalization',
+        'functionality_storage',
+        'personalization_storage',
+        'security_storage',
+    ];
     const DISPLAY_TIMEZONE = 'Asia/Bangkok';
     const DISPLAY_TIMEZONE_LABEL = 'ICT';
 
@@ -36,6 +51,7 @@ class CookieConsentService
     protected $hasConsentIdColumn;
     protected $hasConsentVersionColumn;
     protected $hasManagedCookieCleanupColumns;
+    protected $hasConsentModeColumns;
 
     public function __construct(Connection $db, Application $app)
     {
@@ -45,6 +61,7 @@ class CookieConsentService
         $this->hasConsentIdColumn = null;
         $this->hasConsentVersionColumn = null;
         $this->hasManagedCookieCleanupColumns = null;
+        $this->hasConsentModeColumns = null;
     }
 
     public function getConnection()
@@ -146,7 +163,7 @@ class CookieConsentService
         return null;
     }
 
-    public function DBInsertCookie($name = null, $active = null, $always = null, $header = null, $body = null, $footer = null, $siteid = null, $sortOrder = 0, $managedCookieNames = '', $managedCookieDomain = '', $managedCookiePath = self::MANAGED_COOKIE_PATH_DEFAULT)
+    public function DBInsertCookie($name = null, $active = null, $always = null, $header = null, $body = null, $footer = null, $siteid = null, $sortOrder = 0, $managedCookieNames = '', $managedCookieDomain = '', $managedCookiePath = self::MANAGED_COOKIE_PATH_DEFAULT, $consentModeTypes = '', $codeAlwaysLoad = 0)
     {
         if ($name === null || $siteid === null) {
             return null;
@@ -168,6 +185,13 @@ class CookieConsentService
         if ($this->hasSortOrderColumn()) {
             $columns[] = 'sort_order';
             $args[] = (int) $sortOrder;
+        }
+
+        if ($this->hasConsentModeColumns()) {
+            $columns[] = 'consent_mode_types';
+            $columns[] = 'code_always_load';
+            $args[] = $this->sanitizeConsentModeTypes($consentModeTypes);
+            $args[] = (int) !empty($codeAlwaysLoad);
         }
 
         $columns[] = 'created';
@@ -230,7 +254,7 @@ class CookieConsentService
         return $this->selectCookieById($id, true);
     }
 
-    public function DBUpdateCookie($id = null, $name = null, $active = null, $always = null, $header = null, $body = null, $footer = null, $siteid = null, $sortOrder = 0, $managedCookieNames = '', $managedCookieDomain = '', $managedCookiePath = self::MANAGED_COOKIE_PATH_DEFAULT)
+    public function DBUpdateCookie($id = null, $name = null, $active = null, $always = null, $header = null, $body = null, $footer = null, $siteid = null, $sortOrder = 0, $managedCookieNames = '', $managedCookieDomain = '', $managedCookiePath = self::MANAGED_COOKIE_PATH_DEFAULT, $consentModeTypes = '', $codeAlwaysLoad = 0)
     {
         if ($id === null || $name === null || $siteid === null) {
             return null;
@@ -251,6 +275,13 @@ class CookieConsentService
         if ($this->hasSortOrderColumn()) {
             $sets[] = 'sort_order=?';
             $args[] = (int) $sortOrder;
+        }
+
+        if ($this->hasConsentModeColumns()) {
+            $sets[] = 'consent_mode_types=?';
+            $sets[] = 'code_always_load=?';
+            $args[] = $this->sanitizeConsentModeTypes($consentModeTypes);
+            $args[] = (int) !empty($codeAlwaysLoad);
         }
 
         $sets[] = 'updated=?';
@@ -367,7 +398,8 @@ class CookieConsentService
         }
 
         $args = [0, 1, (int) $section->getCollectionID()];
-        $sql = 'SELECT a.id AS id, a.always AS always, a.code_header AS code_header, a.code_body AS code_body, a.code_footer AS code_footer, b.name AS name, b.content AS content FROM ' . self::TABLE_COOKIE . ' a INNER JOIN ' . self::TABLE_CONTENT . ' b ON (a.id = b.cid) WHERE a.remove=? AND a.active=? AND b.lang=?';
+        $modeColumns = $this->hasConsentModeColumns() ? ', a.consent_mode_types AS consent_mode_types, a.code_always_load AS code_always_load' : '';
+        $sql = 'SELECT a.id AS id, a.always AS always, a.code_header AS code_header, a.code_body AS code_body, a.code_footer AS code_footer' . $modeColumns . ', b.name AS name, b.content AS content FROM ' . self::TABLE_COOKIE . ' a INNER JOIN ' . self::TABLE_CONTENT . ' b ON (a.id = b.cid) WHERE a.remove=? AND a.active=? AND b.lang=?';
         if ($siteid !== null) {
             $args[] = (int) $siteid;
             $sql .= ' AND a.site_id=?';
@@ -545,11 +577,14 @@ class CookieConsentService
     public function getActiveCookiesBySite($siteid = null)
     {
         $args = [0, 1];
+        $selectColumns = 'id, always, site_id';
         if ($this->hasManagedCookieCleanupColumns()) {
-            $sql = 'SELECT id, always, site_id, managed_cookie_names, managed_cookie_domain, managed_cookie_path FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND active=?';
-        } else {
-            $sql = 'SELECT id, always, site_id FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND active=?';
+            $selectColumns .= ', managed_cookie_names, managed_cookie_domain, managed_cookie_path';
         }
+        if ($this->hasConsentModeColumns()) {
+            $selectColumns .= ', consent_mode_types, code_always_load';
+        }
+        $sql = 'SELECT ' . $selectColumns . ' FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND active=?';
 
         if ($siteid !== null) {
             $args[] = (int) $siteid;
@@ -607,7 +642,8 @@ class CookieConsentService
         ];
 
         try {
-            $cookies = $this->db->fetchAll('SELECT id, always, code_header, code_body, code_footer FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND active=? AND site_id=? ORDER BY id ASC', [0, 1, $siteId]);
+            $versionColumns = 'id, always, code_header, code_body, code_footer' . ($this->hasConsentModeColumns() ? ', consent_mode_types, code_always_load' : '');
+            $cookies = $this->db->fetchAll('SELECT ' . $versionColumns . ' FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND active=? AND site_id=? ORDER BY id ASC', [0, 1, $siteId]);
         } catch (\Exception $e) {
             return 'legacy';
         }
@@ -616,13 +652,24 @@ class CookieConsentService
         foreach ($cookies as $row) {
             $cookieId = (int) $row['id'];
             $cookieIds[] = $cookieId;
-            $payload['cookies'][] = [
+            $cookiePayload = [
                 'id' => $cookieId,
                 'always' => (int) $row['always'],
                 'code_header' => (string) $row['code_header'],
                 'code_body' => (string) $row['code_body'],
                 'code_footer' => (string) $row['code_footer'],
             ];
+
+            // Only added when configured, so existing versions stay stable for untouched categories.
+            $modeTypes = $this->sanitizeConsentModeTypes(isset($row['consent_mode_types']) ? $row['consent_mode_types'] : '');
+            if ($modeTypes !== '') {
+                $cookiePayload['consent_mode_types'] = $modeTypes;
+            }
+            if (!empty($row['code_always_load'])) {
+                $cookiePayload['code_always_load'] = 1;
+            }
+
+            $payload['cookies'][] = $cookiePayload;
         }
 
         if (!empty($cookieIds)) {
@@ -662,6 +709,146 @@ class CookieConsentService
         }
 
         return substr(hash('sha256', json_encode($payload)), 0, 16);
+    }
+
+    public function getConsentModeSignals()
+    {
+        return self::CONSENT_MODE_SIGNALS;
+    }
+
+    public function sanitizeConsentModeTypes($value)
+    {
+        $items = is_array($value) ? $value : preg_split('/[\s,]+/', (string) $value);
+        $found = [];
+
+        foreach ($items as $item) {
+            if (!is_scalar($item)) {
+                continue;
+            }
+
+            $item = strtolower(trim((string) $item));
+            if ($item !== '' && in_array($item, self::CONSENT_MODE_SIGNALS, true)) {
+                $found[] = $item;
+            }
+        }
+
+        return implode(',', array_values(array_intersect(self::CONSENT_MODE_SIGNALS, $found)));
+    }
+
+    public function parseConsentModeTypes($value)
+    {
+        $csv = $this->sanitizeConsentModeTypes($value);
+
+        return $csv === '' ? [] : explode(',', $csv);
+    }
+
+    public function getConsentModeSettings()
+    {
+        return [
+            'enabled' => $this->getSettingValue(self::SETTING_CONSENT_MODE_ENABLED, '0') === '1',
+            'wait_for_update' => $this->sanitizeConsentModeWaitForUpdate($this->getSettingValue(self::SETTING_CONSENT_MODE_WAIT_FOR_UPDATE, (string) self::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE)),
+            'ads_data_redaction' => $this->getSettingValue(self::SETTING_CONSENT_MODE_ADS_DATA_REDACTION, '1') === '1',
+            'url_passthrough' => $this->getSettingValue(self::SETTING_CONSENT_MODE_URL_PASSTHROUGH, '0') === '1',
+            'max_wait_for_update' => self::MAX_CONSENT_MODE_WAIT_FOR_UPDATE,
+        ];
+    }
+
+    public function isConsentModeEnabled()
+    {
+        $settings = $this->getConsentModeSettings();
+
+        return !empty($settings['enabled']);
+    }
+
+    public function saveConsentModeSettings(array $settings)
+    {
+        $this->ensureConsentCookieSettingsTable();
+        $this->saveSettingValue(self::SETTING_CONSENT_MODE_ENABLED, !empty($settings['enabled']) ? '1' : '0');
+        $this->saveSettingValue(self::SETTING_CONSENT_MODE_WAIT_FOR_UPDATE, (string) $this->sanitizeConsentModeWaitForUpdate(isset($settings['wait_for_update']) ? $settings['wait_for_update'] : self::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE));
+        $this->saveSettingValue(self::SETTING_CONSENT_MODE_ADS_DATA_REDACTION, !empty($settings['ads_data_redaction']) ? '1' : '0');
+        $this->saveSettingValue(self::SETTING_CONSENT_MODE_URL_PASSTHROUGH, !empty($settings['url_passthrough']) ? '1' : '0');
+
+        return true;
+    }
+
+    public function sanitizeConsentModeWaitForUpdate($value)
+    {
+        if (!is_scalar($value) || !preg_match('/^\d+$/', trim((string) $value))) {
+            return self::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE;
+        }
+
+        return min((int) trim((string) $value), self::MAX_CONSENT_MODE_WAIT_FOR_UPDATE);
+    }
+
+    /**
+     * Consent Mode state: every signal denied, then granted for signals owned by
+     * always-active categories and by the categories the visitor consented to.
+     *
+     * @param int|null $siteid
+     * @param int[]    $consentedIds
+     *
+     * @return array signal => 'granted'|'denied'
+     */
+    public function getConsentModeState($siteid = null, array $consentedIds = [])
+    {
+        $state = array_fill_keys(self::CONSENT_MODE_SIGNALS, 'denied');
+        $consented = [];
+        foreach ($consentedIds as $id) {
+            $consented[(int) $id] = true;
+        }
+
+        foreach ($this->getActiveCookiesBySite($siteid) as $row) {
+            if (empty($row['always']) && !isset($consented[(int) $row['id']])) {
+                continue;
+            }
+
+            foreach ($this->parseConsentModeTypes(isset($row['consent_mode_types']) ? $row['consent_mode_types'] : '') as $signal) {
+                $state[$signal] = 'granted';
+            }
+        }
+
+        return $state;
+    }
+
+    public function getConsentModeDefaultState($siteid = null)
+    {
+        return $this->getConsentModeState($siteid, []);
+    }
+
+    /**
+     * Code of categories flagged "load always" (e.g. a GTM/gtag loader that must run
+     * with Consent Mode so it can read the default/update signals).
+     */
+    public function getAlwaysLoadCode($siteid = null)
+    {
+        $result = ['header' => [], 'body' => [], 'footer' => []];
+        if (!$this->hasConsentModeColumns()) {
+            return $result;
+        }
+
+        $args = [0, 1, 1];
+        $sql = 'SELECT code_header, code_body, code_footer FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND active=? AND code_always_load=?';
+        if ($siteid !== null) {
+            $args[] = (int) $siteid;
+            $sql .= ' AND site_id=?';
+        }
+
+        if ($this->hasSortOrderColumn()) {
+            $sql .= ' ORDER BY sort_order ASC, id ASC';
+        } else {
+            $sql .= ' ORDER BY id ASC';
+        }
+
+        foreach ($this->db->fetchAll($sql, $args) as $row) {
+            foreach (['header', 'body', 'footer'] as $position) {
+                $code = trim((string) $row['code_' . $position]);
+                if ($code !== '' && !in_array($code, $result[$position], true)) {
+                    $result[$position][] = $code;
+                }
+            }
+        }
+
+        return $result;
     }
 
     public function getDisplayTimezone()
@@ -921,6 +1108,65 @@ class CookieConsentService
         return $this->hasConsentVersionColumn;
     }
 
+    protected function getSettingValue($key, $default)
+    {
+        try {
+            $rows = $this->db->fetchAll('SELECT setting_value FROM ' . self::TABLE_SETTING . ' WHERE setting_key=? LIMIT 1', [$key]);
+        } catch (\Exception $e) {
+            return (string) $default;
+        }
+
+        if (!$rows || count($rows) === 0 || $rows[0]['setting_value'] === null) {
+            return (string) $default;
+        }
+
+        return trim((string) $rows[0]['setting_value']);
+    }
+
+    protected function saveSettingValue($key, $value)
+    {
+        $rows = $this->db->fetchAll('SELECT setting_key FROM ' . self::TABLE_SETTING . ' WHERE setting_key=? LIMIT 1', [$key]);
+        if ($rows && count($rows) > 0) {
+            $this->db->executeQuery('UPDATE ' . self::TABLE_SETTING . ' SET setting_value=?, updated=? WHERE setting_key=?', [(string) $value, $this->now(), $key]);
+
+            return;
+        }
+
+        $this->db->executeQuery('INSERT INTO ' . self::TABLE_SETTING . ' (setting_key, setting_value, updated) VALUES (?, ?, ?)', [$key, (string) $value, $this->now()]);
+    }
+
+    protected function hasConsentModeColumns()
+    {
+        if ($this->hasConsentModeColumns !== null) {
+            return $this->hasConsentModeColumns;
+        }
+
+        try {
+            $this->db->fetchAll('SELECT consent_mode_types, code_always_load FROM ' . self::TABLE_COOKIE . ' LIMIT 1');
+            $this->hasConsentModeColumns = true;
+        } catch (\Exception $e) {
+            foreach ([
+                'ALTER TABLE ' . self::TABLE_COOKIE . ' ADD consent_mode_types VARCHAR(255) NULL',
+                'ALTER TABLE ' . self::TABLE_COOKIE . ' ADD code_always_load TINYINT(1) NOT NULL DEFAULT 0',
+            ] as $sql) {
+                try {
+                    $this->db->executeQuery($sql);
+                } catch (\Exception $innerException) {
+                    // Ignore; column may already exist or DB user may not have ALTER permissions.
+                }
+            }
+
+            try {
+                $this->db->fetchAll('SELECT consent_mode_types, code_always_load FROM ' . self::TABLE_COOKIE . ' LIMIT 1');
+                $this->hasConsentModeColumns = true;
+            } catch (\Exception $innerException) {
+                $this->hasConsentModeColumns = false;
+            }
+        }
+
+        return $this->hasConsentModeColumns;
+    }
+
     protected function hasManagedCookieCleanupColumns()
     {
         if ($this->hasManagedCookieCleanupColumns !== null) {
@@ -1085,6 +1331,8 @@ class CookieConsentService
         $row['managed_cookie_names'] = isset($row['managed_cookie_names']) ? trim((string) $row['managed_cookie_names']) : '';
         $row['managed_cookie_domain'] = $this->sanitizeManagedCookieDomain(isset($row['managed_cookie_domain']) ? $row['managed_cookie_domain'] : '');
         $row['managed_cookie_path'] = $this->sanitizeManagedCookiePath(isset($row['managed_cookie_path']) ? $row['managed_cookie_path'] : self::MANAGED_COOKIE_PATH_DEFAULT);
+        $row['consent_mode_types'] = $this->sanitizeConsentModeTypes(isset($row['consent_mode_types']) ? $row['consent_mode_types'] : '');
+        $row['code_always_load'] = !empty($row['code_always_load']) ? 1 : 0;
     }
 
     protected function insertLog($data, $withSite)

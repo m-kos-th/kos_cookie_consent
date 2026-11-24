@@ -22,6 +22,16 @@ document.addEventListener("DOMContentLoaded", function () {
   var siteId = popup.getAttribute("data-site-id") || "";
   var editMode = popup.getAttribute("data-edit-mode") === "1";
   var consentCookieName = "kos_cookie_consent_id";
+  var consentModeCookieName = "kos_consent_mode";
+  var consentModeSignals = [
+    "ad_storage",
+    "analytics_storage",
+    "ad_user_data",
+    "ad_personalization",
+    "functionality_storage",
+    "personalization_storage",
+    "security_storage",
+  ];
   var defaultConsentCookieMaxAge = 30 * 24 * 60 * 60;
   var consentCookieMaxAge = parseInt(popup.getAttribute("data-consent-cookie-max-age"), 10);
   consentCookieMaxAge = consentCookieMaxAge > 0 ? consentCookieMaxAge : defaultConsentCookieMaxAge;
@@ -487,6 +497,44 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // Google Consent Mode V2: push the signals computed by the server for the saved consent.
+  function applyConsentMode(mode) {
+    if (!mode || !mode.enabled) {
+      return;
+    }
+
+    var hadStoredSignals = !!getCookie(consentModeCookieName);
+    if (!mode.saved && !hadStoredSignals) {
+      return;
+    }
+
+    var signals = {};
+    var source = mode.state && typeof mode.state === "object" ? mode.state : {};
+    consentModeSignals.forEach(function (signal) {
+      signals[signal] = source[signal] === "granted" ? "granted" : "denied";
+    });
+
+    window.dataLayer = window.dataLayer || [];
+    if (typeof window.gtag !== "function") {
+      window.gtag = function () {
+        window.dataLayer.push(arguments);
+      };
+    }
+
+    window.gtag("consent", "update", signals);
+    window.dataLayer.push({
+      event: "kos_consent_update",
+      kos_consent_saved: !!mode.saved,
+      kos_consent_state: signals,
+    });
+
+    if (mode.saved) {
+      setCookie(consentModeCookieName, JSON.stringify(signals), consentCookieMaxAge);
+    } else {
+      expireCookie(consentModeCookieName, "", "/");
+    }
+  }
+
   function afterNextPaint(callback) {
     if (window.requestAnimationFrame) {
       window.requestAnimationFrame(callback);
@@ -516,6 +564,7 @@ document.addEventListener("DOMContentLoaded", function () {
       applySavedConsent(state.consent || []);
       clearManagedCookies(state.managedCookieCleanup || {}, state.consent || []);
     }
+    applyConsentMode(state.consent_mode);
     injectCodes(state.code || {});
 
     return state;
@@ -633,6 +682,10 @@ document.addEventListener("DOMContentLoaded", function () {
           throw new Error("save_not_persisted");
         }
 
+        if (Object.prototype.hasOwnProperty.call(result.data, "cookie_max_age")) {
+          consentCookieMaxAge = normalizeCookieMaxAge(result.data.cookie_max_age);
+        }
+        applyConsentMode(result.data.consent_mode);
         injectCodes(result.data.code || {});
         if (Object.prototype.hasOwnProperty.call(result.data, "cookie_max_age")) {
           consentCookieMaxAge = normalizeCookieMaxAge(result.data.cookie_max_age);

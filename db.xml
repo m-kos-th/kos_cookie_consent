@@ -42,6 +42,11 @@
       <default value="0"/>
       <notnull/>
     </field>
+    <field name="consent_mode_types" type="string" size="255"/>
+    <field name="code_always_load" type="boolean">
+      <default value="0"/>
+      <notnull/>
+    </field>
     <field name="created" type="datetime"/>
     <field name="updated" type="datetime"/>
     <index name="remove">
@@ -127,8 +132,8 @@
 
   <table name="_KosCookieConsentSetting">
     <field name="setting_key" type="string" size="100">
-      <notnull/>
       <key/>
+      <notnull/>
     </field>
     <field name="setting_value" type="text" size="65535"/>
     <field name="updated" type="datetime"/>

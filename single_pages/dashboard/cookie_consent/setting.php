@@ -83,6 +83,33 @@
             <?php echo $form->textarea('code_footer', isset($_post['code_footer']) ? $_post['code_footer'] : '', ['style' => 'height: 150px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
           </div>
           <hr>
+          <legend><?php echo t('Google Consent Mode V2') ?></legend>
+          <?php
+            $_postedModeTypes = isset($_post['consent_mode_types']) ? $_post['consent_mode_types'] : [];
+            $_selectedModeTypes = $controller->kosdesign->parseConsentModeTypes($_postedModeTypes);
+          ?>
+          <div class="form-group">
+            <label><?php echo t('Consent signals granted by this category') ?></label>
+            <?php foreach ((isset($_consentModeSignals) ? $_consentModeSignals : []) as $_signal) { ?>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="consent_mode_types_<?php echo h($_signal); ?>" name="consent_mode_types[]" value="<?php echo h($_signal); ?>"<?php echo in_array($_signal, $_selectedModeTypes, true) ? ' checked' : ''; ?>>
+                <label class="form-check-label" for="consent_mode_types_<?php echo h($_signal); ?>"><code><?php echo h($_signal); ?></code></label>
+              </div>
+            <?php } ?>
+            <small class="form-text text-muted">
+              <?php echo t('Used only when Consent Mode is enabled in Setting. Signals start as denied and switch to granted when the visitor accepts this category (always-active categories are granted by default). Google Consent Mode V2 requires %s, %s, %s and %s.', 'ad_storage', 'analytics_storage', 'ad_user_data', 'ad_personalization'); ?>
+            </small>
+          </div>
+          <div class="form-group">
+            <div class="form-check">
+              <?php echo $form->checkbox('code_always_load', '1', !empty($_post['code_always_load']) ? '1' : '0') ?>
+              <label class="form-check-label" for="code_always_load"><?php echo t('Load the tracking codes above on every page, regardless of consent') ?></label>
+            </div>
+            <small class="form-text text-muted">
+              <?php echo t('Use for a GTM/gtag loader that must run with Consent Mode so it can read the default and update signals. Do not enable this for tags that ignore Consent Mode.'); ?>
+            </small>
+          </div>
+          <hr>
           <legend><?php echo t('Managed Cookie Cleanup') ?></legend>
           <div class="form-group">
             <?php echo $form->label('managed_cookie_names', t('Cookies to clear on withdrawal')) ?>
@@ -190,6 +217,42 @@
         <div class="mt-3 text-end">
           <input type="hidden" name="token" value="<?php echo $_tokenSettings; ?>">
           <button type="submit" class="btn btn-primary"><?php echo t('Save retention'); ?></button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <h3 class="h5 mb-3"><?php echo t('Google Consent Mode V2'); ?></h3>
+      <p class="text-muted">
+        <?php echo t('When enabled, the package registers a default consent state (all denied) in the page head before any tag runs, then sends an update with the visitor choice. Map each category to its signals when adding or editing a cookie.'); ?>
+      </p>
+      <form method="post" action="<?php echo $view->action('save_consent_mode'); ?>">
+        <div class="form-check mb-3">
+          <input type="checkbox" class="form-check-input" id="consent_mode_enabled" name="consent_mode_enabled" value="1"<?php echo !empty($_consentModeSettings['enabled']) ? ' checked' : ''; ?>>
+          <label class="form-check-label" for="consent_mode_enabled"><?php echo t('Enable Consent Mode V2'); ?></label>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <div class="form-group">
+              <label for="consent_mode_wait_for_update"><?php echo t('Wait for update (ms)'); ?></label>
+              <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
+            </div>
+          </div>
+          <div class="col-md-9">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="consent_mode_ads_data_redaction" name="consent_mode_ads_data_redaction" value="1"<?php echo !empty($_consentModeSettings['ads_data_redaction']) ? ' checked' : ''; ?>>
+              <label class="form-check-label" for="consent_mode_ads_data_redaction"><code>ads_data_redaction</code> <?php echo t('(redact ad click identifiers while ad_storage is denied)'); ?></label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="consent_mode_url_passthrough" name="consent_mode_url_passthrough" value="1"<?php echo !empty($_consentModeSettings['url_passthrough']) ? ' checked' : ''; ?>>
+              <label class="form-check-label" for="consent_mode_url_passthrough"><code>url_passthrough</code> <?php echo t('(pass ad click information through URL parameters)'); ?></label>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 text-end">
+          <input type="hidden" name="token" value="<?php echo $_tokenConsentMode; ?>">
+          <button type="submit" class="btn btn-primary"><?php echo t('Save Consent Mode'); ?></button>
         </div>
       </form>
     </div>

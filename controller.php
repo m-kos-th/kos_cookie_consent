@@ -17,8 +17,8 @@ defined('C5_EXECUTE') or die('Access Denied.');
 class Controller extends Package
 {
     protected $pkgHandle = 'kos_cookie_consent';
-    protected $appVersionRequired = '9.0.0';
-    protected $pkgVersion = '0.2.9';
+    protected $appVersionRequired = '8.5.0';
+    protected $pkgVersion = '0.3.0';
     protected $pkgAutoloaderRegistries = [
         'src' => '\Concrete\Package\KosCookieConsent\Src',
     ];
@@ -31,7 +31,7 @@ class Controller extends Package
 
     public function getPackageDescription()
     {
-        return t('Automatic multilingual cookie consent popup with dashboard category management, consent logs/export, consent versioning, tracking-code gating, and Cookie Settings for changing preferences.');
+        return t('Automatic multilingual cookie consent popup with dashboard category management, consent logs/export, consent versioning, tracking-code gating, Cookie Settings, and Google Consent Mode V2 support.');
     }
 
     public function on_start()
@@ -77,6 +77,7 @@ class Controller extends Package
         $this->ensureCookieSortColumn();
         $this->ensureManagedCookieCleanupColumns();
         $this->ensureConsentCookieSettingsTable();
+        $this->ensureConsentModeColumns();
         $this->installSinglePages($pkg);
     }
 
@@ -234,6 +235,43 @@ class Controller extends Package
         }
     }
 
+    protected function ensureConsentModeColumns()
+    {
+        $db = $this->app['database/connection'];
+
+        foreach ([
+            'ALTER TABLE _KosCookie ADD consent_mode_types VARCHAR(255) NULL',
+            'ALTER TABLE _KosCookie ADD code_always_load TINYINT(1) NOT NULL DEFAULT 0',
+        ] as $sql) {
+            try {
+                $db->executeQuery($sql);
+            } catch (\Throwable $e) {
+                // Columns may already exist.
+            }
+        }
+
+        $defaults = [
+            CookieConsentService::SETTING_CONSENT_MODE_ENABLED => '0',
+            CookieConsentService::SETTING_CONSENT_MODE_WAIT_FOR_UPDATE => (string) CookieConsentService::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE,
+            CookieConsentService::SETTING_CONSENT_MODE_ADS_DATA_REDACTION => '1',
+            CookieConsentService::SETTING_CONSENT_MODE_URL_PASSTHROUGH => '0',
+        ];
+
+        foreach ($defaults as $key => $value) {
+            try {
+                $existing = $db->fetchAll('SELECT setting_key FROM _KosCookieConsentSetting WHERE setting_key=? LIMIT 1', [$key]);
+                if (empty($existing)) {
+                    $db->executeQuery(
+                        'INSERT INTO _KosCookieConsentSetting (setting_key, setting_value, updated) VALUES (?, ?, ?)',
+                        [$key, $value, gmdate('Y-m-d H:i:s')]
+                    );
+                }
+            } catch (\Throwable $e) {
+                // Settings table may not be ready; the service falls back to defaults.
+            }
+        }
+    }
+
     protected function installSinglePages($pkg)
     {
         $pages = [
@@ -323,10 +361,15 @@ class Controller extends Package
             return false;
         }
 
-        /** @var CookieConsentHelper $helper */
-        $helper = $this->app->make(CookieConsentHelper::class);
+        try {
+            /** @var CookieConsentHelper $helper */
+            $helper = $this->app->make(CookieConsentHelper::class);
 
-        return $helper->getCurrentSiteId() !== null && !empty($helper->getCookieList());
+            return $helper->getCurrentSiteId() !== null && !empty($helper->getCookieList());
+        } catch (\Throwable $e) {
+            // Tables missing (partial install/upgrade): never break the public site.
+            return false;
+        }
     }
 
     protected function appendFrontendAssets(View $view)
@@ -337,6 +380,14 @@ class Controller extends Package
 
         $basePath = $this->getRelativePath();
         $version = h($this->getPackageVersion());
+
+        /** @var CookieConsentHelper $helper */
+        $helper = $this->app->make(CookieConsentHelper::class);
+        $consentModeScript = $helper->renderConsentModeDefaultScript($helper->getCurrentSiteId());
+        if ($consentModeScript !== '') {
+            // Must be printed before any gtag/GTM loader so the default state is registered first.
+            $view->addHeaderItem($consentModeScript);
+        }
 
         $view->addHeaderItem('<link rel="stylesheet" href="' . h($basePath) . '/assets/css/cookie-popup.css?v=' . $version . '">');
         $view->addFooterItem($this->renderPackageElement('cookie_popup'));
