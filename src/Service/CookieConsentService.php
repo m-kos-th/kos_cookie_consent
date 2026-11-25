@@ -518,6 +518,120 @@ class CookieConsentService
         return true;
     }
 
+    /**
+     * Built-in popup copy used when an editor leaves a field empty.
+     * Bundled languages: English, Thai, Japanese, Chinese (Simplified, used for every zh locale).
+     * Any other language falls back to English.
+     *
+     * @param string $language Locale or language code, e.g. "th_TH", "ja" or "zh_TW"
+     *
+     * @return array
+     */
+    public function getDefaultPopupCopy($language = 'en')
+    {
+        $key = $this->resolveDefaultLanguageKey($language);
+        $base = $this->getBaseDefaultPopupCopy($key === 'th');
+        $extra = $this->getExtraPopupCopyTranslations();
+
+        return isset($extra[$key]) ? array_merge($base, $extra[$key]) : $base;
+    }
+
+    /**
+     * Maps a locale or language code to the key of a bundled default translation.
+     *
+     * @return string en|th|ja|zh-hans
+     */
+    public function resolveDefaultLanguageKey($languageOrLocale)
+    {
+        $value = strtolower(str_replace('-', '_', (string) $languageOrLocale));
+        $language = substr($value, 0, 2);
+        if ($language === 'zh') {
+            // Every Chinese locale (zh_CN, zh_TW, ...) uses Simplified Chinese.
+            return 'zh-hans';
+        }
+
+        return in_array($language, ['th', 'ja'], true) ? $language : 'en';
+    }
+
+    protected function getExtraPopupCopyTranslations()
+    {
+        return [
+            'ja' => [
+                'bannerTitle' => 'プライバシーを大切にします',
+                'bannerSummary' => '当サイトでは、機能を正常に動作させ、データ保護関連法令に従ってアクセスを分析するためにCookieを使用しています。設定を管理するか、すべてのCookieを受け入れることができます。',
+                'bannerPolicyPrefix' => '詳細は次をご覧ください：',
+                'privacyPolicy' => 'プライバシーポリシー',
+                'modalTitle' => 'プライバシー設定センター',
+                'modalIntroOne' => 'ウェブサイトを閲覧すると、ブラウザ上に情報が保存または取得されることがあり、その多くはCookieの形式です。この情報は、お客様ご自身、お客様の設定、またはお使いのデバイスに関するもので、主にウェブサイトを期待どおりに動作させるために使用されます。',
+                'modalIntroTwo' => 'この情報は通常、お客様を直接特定するものではありませんが、よりパーソナライズされたウェブ体験を提供できます。お客様のプライバシーの権利を尊重し、特定の種類のCookieを許可しない選択もできます。一部の種類のCookieをブロックすると、サイトの利用体験や当社が提供できるサービスに影響する場合があります。',
+                'preferencesTitle' => '同意設定の管理',
+                'customize' => 'カスタマイズ',
+                'accept' => 'すべて受け入れる',
+                'decline' => 'すべて拒否',
+                'save' => '設定を保存',
+                'settingsLink' => 'Cookie設定',
+                'close' => '閉じる',
+                'alwaysOn' => '常に有効',
+            ],
+            'zh-hans' => [
+                'bannerTitle' => '我们重视您的隐私',
+                'bannerSummary' => '本网站使用 Cookie 以确保网站正常运行，并依据数据保护法律分析访问流量。您可以管理偏好设置，或接受所有 Cookie。',
+                'bannerPolicyPrefix' => '更多详情请阅读我们的',
+                'privacyPolicy' => '隐私政策',
+                'modalTitle' => '隐私偏好中心',
+                'modalIntroOne' => '当您访问任何网站时，网站可能会在您的浏览器中存储或读取信息，通常以 Cookie 的形式。这些信息可能与您、您的偏好或您的设备有关，主要用于让网站按您的预期正常运行。',
+                'modalIntroTwo' => '这些信息通常不会直接识别您的身份，但可以为您提供更个性化的网络体验。我们尊重您的隐私权，因此您可以选择不允许某些类型的 Cookie。阻止某些类型的 Cookie 可能会影响您对本网站的体验以及我们能够提供的服务。',
+                'preferencesTitle' => '管理同意偏好',
+                'customize' => '自定义',
+                'accept' => '全部接受',
+                'decline' => '全部拒绝',
+                'save' => '保存偏好',
+                'settingsLink' => 'Cookie 设置',
+                'close' => '关闭',
+                'alwaysOn' => '始终启用',
+            ],
+        ];
+    }
+
+    protected function getBaseDefaultPopupCopy($isThai)
+    {
+        return $isThai ? [
+            'bannerTitle' => 'เราให้ความสําคัญกับความเป็นส่วนตัวของคุณ',
+            'bannerSummary' => 'เว็บไซต์นี้ใช้คุกกี้เพื่อให้การทํางานพื้นฐานสมบูรณ์และเพื่อวิเคราะห์การใช้งานตามกฎหมายคุ้มครองข้อมูล คุณสามารถจัดการการตั้งค่าของคุณหรือยอมรับคุกกี้ทั้งหมดได้',
+            'bannerPolicyPrefix' => 'ดูรายละเอียดเพิ่มเติมได้ที่',
+            'privacyPolicy' => 'นโยบายความเป็นส่วนตัว',
+            'modalTitle' => 'ศูนย์จัดการความเป็นส่วนตัว',
+            'modalIntroOne' => 'เมื่อคุณเข้าชมเว็บไซต์ ข้อมูลบางอย่างอาจถูกจัดเก็บหรือดึงจากเบราว์เซอร์ของคุณ โดยมากจะอยู่ในรูปแบบของคุกกี้ ข้อมูลดังกล่าวอาจเกี่ยวข้องกับคุณ การตั้งค่าของคุณ หรืออุปกรณ์ของคุณ และส่วนใหญ่ใช้เพื่อให้เว็บไซต์ทํางานได้ตามที่คุณคาดหวัง',
+            'modalIntroTwo' => 'ข้อมูลนี้มักไม่ได้ระบุตัวตนของคุณโดยตรง แต่ช่วยให้เราออกแบบประสบการณ์ใช้งานที่เหมาะกับคุณมากขึ้นได้ คุณสามารถเลือกไม่อนุญาตคุกกี้บางประเภทได้ อย่างไรก็ตาม การปิดคุกกี้บางประเภทอาจส่งผลต่อประสบการณ์ใช้งานและบริการบางส่วนของเว็บไซต์',
+            'preferencesTitle' => 'จัดการการตั้งค่าความยินยอม',
+            'customize' => 'Customize',
+            'accept' => 'Accept',
+            'decline' => 'Reject All',
+            'save' => 'Save Preferences',
+            'settingsLink' => 'ตั้งค่าคุกกี้',
+            'close' => 'ปิด',
+            'alwaysOn' => 'เปิดใช้งานเสมอ',
+            'error' => '',
+        ] : [
+            'bannerTitle' => 'We value your privacy.',
+            'bannerSummary' => 'This site uses cookies to ensure proper functionality and to analyze traffic in accordance with data protection laws. You can manage your preferences or accept all cookies.',
+            'bannerPolicyPrefix' => 'For more details, please read our',
+            'privacyPolicy' => 'Privacy Policy',
+            'modalTitle' => 'Privacy Preference Center',
+            'modalIntroOne' => 'When you visit any website, it may store or retrieve information on your browser, mostly in the form of cookies. This information may relate to you, your preferences, or your device and is mainly used to make the website work as you expect it to.',
+            'modalIntroTwo' => 'This information usually does not directly identify you, but it can provide you with a more personalized web experience. Because we respect your right to privacy, you can choose not to allow certain types of cookies. Blocking some types of cookies may impact your experience of the site and the services we are able to offer.',
+            'preferencesTitle' => 'Manage Consent Preferences',
+            'customize' => 'Customize',
+            'accept' => 'Accept',
+            'decline' => 'Reject All',
+            'save' => 'Save Preferences',
+            'settingsLink' => 'Cookie Settings',
+            'close' => 'Close',
+            'alwaysOn' => 'Always active',
+            'error' => '',
+        ];
+    }
+
     public function getPopupCopy(array $defaults = [])
     {
         $section = $this->getCurrentSection();
@@ -727,79 +841,117 @@ class CookieConsentService
                 'name' => 'Necessary',
                 'always' => 1,
                 'signals' => 'functionality_storage,security_storage',
-                'label' => ['en' => 'Necessary', 'th' => 'คุกกี้ที่จำเป็น'],
+                'label' => ['en' => 'Necessary', 'th' => 'คุกกี้ที่จำเป็น', 'ja' => '必須Cookie', 'zh-hans' => '必要 Cookie'],
                 'content' => [
                     'en' => 'Necessary cookies make the website usable by enabling basic functions such as page navigation, security and remembering your cookie choices. The website cannot function properly without these cookies.',
                     'th' => 'คุกกี้ที่จำเป็นช่วยให้เว็บไซต์ใช้งานได้ตามปกติ เช่น การนำทางระหว่างหน้า ความปลอดภัย และการจดจำตัวเลือกคุกกี้ของคุณ เว็บไซต์ไม่สามารถทำงานได้อย่างถูกต้องหากไม่มีคุกกี้เหล่านี้',
+                    'ja' => '必須Cookieは、ページ間の移動、セキュリティ、Cookieの選択内容の保存など、ウェブサイトの基本機能を有効にするために必要です。これらのCookieがないと、ウェブサイトは正常に機能しません。',
+                    'zh-hans' => '必要 Cookie 用于实现网站的基本功能，例如页面导航、安全防护以及记住您的 Cookie 选择。没有这些 Cookie，网站将无法正常运行。',
                 ],
             ],
             [
                 'name' => 'Statistics',
                 'always' => 0,
                 'signals' => 'analytics_storage',
-                'label' => ['en' => 'Statistics', 'th' => 'คุกกี้เพื่อการวิเคราะห์สถิติ'],
+                'label' => ['en' => 'Statistics', 'th' => 'คุกกี้เพื่อการวิเคราะห์สถิติ', 'ja' => '統計Cookie', 'zh-hans' => '统计 Cookie'],
                 'content' => [
                     'en' => 'Statistics cookies help us understand how visitors use the website by collecting and reporting information anonymously, so we can improve the website.',
                     'th' => 'คุกกี้เพื่อการวิเคราะห์สถิติช่วยให้เราเข้าใจวิธีที่ผู้เยี่ยมชมใช้งานเว็บไซต์ โดยเก็บและรายงานข้อมูลแบบไม่ระบุตัวตน เพื่อนำไปปรับปรุงเว็บไซต์',
+                    'ja' => '統計Cookieは、訪問者がウェブサイトをどのように利用しているかを匿名で収集・報告することで、サイトの改善に役立てるために使用されます。',
+                    'zh-hans' => '统计 Cookie 通过匿名收集和报告信息，帮助我们了解访问者如何使用网站，以便改进网站。',
                 ],
             ],
             [
                 'name' => 'Marketing',
                 'always' => 0,
                 'signals' => 'ad_storage,ad_user_data,ad_personalization',
-                'label' => ['en' => 'Marketing', 'th' => 'คุกกี้เพื่อการตลาด'],
+                'label' => ['en' => 'Marketing', 'th' => 'คุกกี้เพื่อการตลาด', 'ja' => 'マーケティングCookie', 'zh-hans' => '营销 Cookie'],
                 'content' => [
                     'en' => 'Marketing cookies are used to measure the effectiveness of advertising and to show you ads that are more relevant to you, including on other websites.',
                     'th' => 'คุกกี้เพื่อการตลาดใช้วัดประสิทธิภาพของโฆษณา และแสดงโฆษณาที่เกี่ยวข้องกับคุณมากขึ้น รวมถึงบนเว็บไซต์อื่น',
+                    'ja' => 'マーケティングCookieは、広告の効果を測定し、他のウェブサイト上を含め、お客様にとってより関連性の高い広告を表示するために使用されます。',
+                    'zh-hans' => '营销 Cookie 用于衡量广告效果，并向您展示更相关的广告，包括在其他网站上展示。',
                 ],
             ],
         ];
     }
 
     /**
-     * Creates the default categories for one site (or every site when $siteId is null).
-     * Categories whose internal name already exists on that site are left untouched.
+     * Creates the default categories for one site (or every site when $siteId is null), then makes sure
+     * every language of the site has text for them. A language without a built-in translation
+     * (only English and Thai are bundled) gets the English text, so editors do not have to fill it in.
+     * Existing categories are never changed; only languages that have no text yet are completed.
      *
-     * @return int number of categories created
+     * @return array ['created' => categories created, 'filled' => language texts added]
      */
     public function createDefaultCategories($siteId = null)
     {
         $created = 0;
+        $filled = 0;
         $languages = $this->getSiteLanguage();
         $siteIds = $siteId !== null ? [(int) $siteId] : array_keys($this->getSite());
 
         foreach ($siteIds as $currentSiteId) {
+            $siteLanguages = [];
+            foreach ($languages as $language) {
+                if ((int) $language['site_id'] === (int) $currentSiteId) {
+                    $siteLanguages[] = $language;
+                }
+            }
+
             $existing = [];
-            foreach ($this->db->fetchAll('SELECT name FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND site_id=?', [0, (int) $currentSiteId]) as $row) {
-                $existing[strtolower((string) $row['name'])] = true;
+            foreach ($this->db->fetchAll('SELECT id, name FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND site_id=?', [0, (int) $currentSiteId]) as $row) {
+                $existing[strtolower((string) $row['name'])] = (int) $row['id'];
             }
 
             $order = $this->DBCountCookieV2($currentSiteId);
             foreach ($this->getDefaultCategoryDefinitions() as $definition) {
-                if (isset($existing[strtolower($definition['name'])])) {
-                    continue;
-                }
-
-                $order++;
-                $cookieId = $this->DBInsertCookie($definition['name'], 1, $definition['always'], '', '', '', $currentSiteId, $order, '', '', self::MANAGED_COOKIE_PATH_DEFAULT, $definition['signals'], 0);
-                if (!$cookieId) {
-                    continue;
-                }
-
-                foreach ($languages as $language) {
-                    if ((int) $language['site_id'] !== (int) $currentSiteId) {
+                $key = strtolower($definition['name']);
+                if (isset($existing[$key])) {
+                    $cookieId = $existing[$key];
+                } else {
+                    $order++;
+                    $cookieId = $this->DBInsertCookie($definition['name'], 1, $definition['always'], '', '', '', $currentSiteId, $order, '', '', self::MANAGED_COOKIE_PATH_DEFAULT, $definition['signals'], 0);
+                    if (!$cookieId) {
                         continue;
                     }
-
-                    $code = isset($definition['label'][$language['language']]) ? $language['language'] : 'en';
-                    $this->DBInsertContent($cookieId, $language['page_id'], $language['language'], $definition['label'][$code], '<p>' . h($definition['content'][$code]) . '</p>');
+                    $created++;
                 }
 
-                $created++;
+                $filled += $this->fillMissingDefaultContent((int) $cookieId, $definition, $siteLanguages);
             }
         }
 
-        return $created;
+        return ['created' => $created, 'filled' => $filled];
+    }
+
+    /**
+     * Adds text for the languages of a site that have none yet for this category.
+     *
+     * @return int number of language texts added
+     */
+    protected function fillMissingDefaultContent($cookieId, array $definition, array $siteLanguages)
+    {
+        $have = [];
+        foreach ($this->db->fetchAll('SELECT lang FROM ' . self::TABLE_CONTENT . ' WHERE cid=?', [(int) $cookieId]) as $row) {
+            $have[(int) $row['lang']] = true;
+        }
+
+        $added = 0;
+        foreach ($siteLanguages as $language) {
+            if (isset($have[(int) $language['page_id']])) {
+                continue;
+            }
+
+            $code = $this->resolveDefaultLanguageKey(isset($language['locale']) ? $language['locale'] : $language['language']);
+            if (!isset($definition['label'][$code])) {
+                $code = 'en';
+            }
+            $this->DBInsertContent($cookieId, $language['page_id'], $language['language'], $definition['label'][$code], '<p>' . h($definition['content'][$code]) . '</p>');
+            $added++;
+        }
+
+        return $added;
     }
 
     public function sanitizeConsentModeTypes($value)

@@ -24,8 +24,7 @@ if ($isEditMode) {
 }
 
 $currentSection = Section::getCurrentSection();
-$language = $currentSection ? strtolower((string) $currentSection->getLanguage()) : 'en';
-$isThai = strpos($language, 'th') === 0;
+$language = $currentSection ? (string) $currentSection->getLocale() : 'en';
 $privacyPolicyUrl = null;
 $privacyPolicyPage = Page::getByPath('/privacy_policy');
 if ($privacyPolicyPage && !$privacyPolicyPage->isError()) {
@@ -42,41 +41,7 @@ if ($privacyPolicyPage && !$privacyPolicyPage->isError()) {
     $privacyPolicyUrl = $privacyPolicyPage->getCollectionLink();
 }
 
-$defaultCopy = $isThai ? [
-    'bannerTitle' => 'เราให้ความสําคัญกับความเป็นส่วนตัวของคุณ',
-    'bannerSummary' => 'เว็บไซต์นี้ใช้คุกกี้เพื่อให้การทํางานพื้นฐานสมบูรณ์และเพื่อวิเคราะห์การใช้งานตามกฎหมายคุ้มครองข้อมูล คุณสามารถจัดการการตั้งค่าของคุณหรือยอมรับคุกกี้ทั้งหมดได้',
-    'bannerPolicyPrefix' => 'ดูรายละเอียดเพิ่มเติมได้ที่',
-    'privacyPolicy' => 'นโยบายความเป็นส่วนตัว',
-    'modalTitle' => 'ศูนย์จัดการความเป็นส่วนตัว',
-    'modalIntroOne' => 'เมื่อคุณเข้าชมเว็บไซต์ ข้อมูลบางอย่างอาจถูกจัดเก็บหรือดึงจากเบราว์เซอร์ของคุณ โดยมากจะอยู่ในรูปแบบของคุกกี้ ข้อมูลดังกล่าวอาจเกี่ยวข้องกับคุณ การตั้งค่าของคุณ หรืออุปกรณ์ของคุณ และส่วนใหญ่ใช้เพื่อให้เว็บไซต์ทํางานได้ตามที่คุณคาดหวัง',
-    'modalIntroTwo' => 'ข้อมูลนี้มักไม่ได้ระบุตัวตนของคุณโดยตรง แต่ช่วยให้เราออกแบบประสบการณ์ใช้งานที่เหมาะกับคุณมากขึ้นได้ คุณสามารถเลือกไม่อนุญาตคุกกี้บางประเภทได้ อย่างไรก็ตาม การปิดคุกกี้บางประเภทอาจส่งผลต่อประสบการณ์ใช้งานและบริการบางส่วนของเว็บไซต์',
-    'preferencesTitle' => 'จัดการการตั้งค่าความยินยอม',
-    'customize' => 'Customize',
-    'accept' => 'Accept',
-    'decline' => 'Reject All',
-    'save' => 'Save Preferences',
-    'settingsLink' => 'ตั้งค่าคุกกี้',
-    'close' => 'ปิด',
-    'alwaysOn' => 'เปิดใช้งานเสมอ',
-    'error' => '',
-] : [
-    'bannerTitle' => 'We value your privacy.',
-    'bannerSummary' => 'This site uses cookies to ensure proper functionality and to analyze traffic in accordance with data protection laws. You can manage your preferences or accept all cookies.',
-    'bannerPolicyPrefix' => 'For more details, please read our',
-    'privacyPolicy' => 'Privacy Policy',
-    'modalTitle' => 'Privacy Preference Center',
-    'modalIntroOne' => 'When you visit any website, it may store or retrieve information on your browser, mostly in the form of cookies. This information may relate to you, your preferences, or your device and is mainly used to make the website work as you expect it to.',
-    'modalIntroTwo' => 'This information usually does not directly identify you, but it can provide you with a more personalized web experience. Because we respect your right to privacy, you can choose not to allow certain types of cookies. Blocking some types of cookies may impact your experience of the site and the services we are able to offer.',
-    'preferencesTitle' => 'Manage Consent Preferences',
-    'customize' => 'Customize',
-    'accept' => 'Accept',
-    'decline' => 'Reject All',
-    'save' => 'Save Preferences',
-    'settingsLink' => 'Cookie Settings',
-    'close' => 'Close',
-    'alwaysOn' => 'Always active',
-    'error' => '',
-];
+$defaultCopy = $helper->getDefaultPopupCopy($language);
 
 $copy = $helper->getPopupCopy($defaultCopy);
 

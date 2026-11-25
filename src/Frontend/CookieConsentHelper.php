@@ -44,6 +44,11 @@ class CookieConsentHelper
         return $consentId !== '' ? $consentId : null;
     }
 
+    public function getDefaultPopupCopy($language = 'en')
+    {
+        return $this->cookieConsent->getDefaultPopupCopy($language);
+    }
+
     public function getPopupCopy(array $defaults = [])
     {
         return $this->cookieConsent->getPopupCopy($defaults);

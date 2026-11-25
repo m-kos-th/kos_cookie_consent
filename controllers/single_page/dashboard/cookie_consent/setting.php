@@ -18,21 +18,6 @@ class Setting extends CookieConsent
         $this->addDashboardStylesheet();
     }
 
-    /**
-     * Load the compiled stylesheet (assets/scss/dashboard-setting.scss) for this page.
-     */
-    protected function addDashboardStylesheet()
-    {
-        try {
-            $pkg = $this->app->make('Concrete\\Core\\Package\\PackageService')->getClass('kos_cookie_consent');
-            if ($pkg) {
-                $this->addHeaderItem('<link rel="stylesheet" href="' . h($pkg->getRelativePath()) . '/assets/css/dashboard-setting.css?v=' . h($pkg->getPackageVersion()) . '">');
-            }
-        } catch (\Throwable $e) {
-            // Styling is cosmetic; never block the dashboard page.
-        }
-    }
-
     public function view()
     {
         $data = $this->request->query->all();
@@ -74,9 +59,16 @@ class Setting extends CookieConsent
         }
 
         try {
-            $created = $this->kosdesign->createDefaultCategories();
-            if ($created > 0) {
-                $this->flash('success', t2('%d default category was added.', '%d default categories were added.', $created));
+            $result = $this->kosdesign->createDefaultCategories();
+            $messages = [];
+            if ($result['created'] > 0) {
+                $messages[] = t2('%d default category was added.', '%d default categories were added.', $result['created']);
+            }
+            if ($result['filled'] > 0) {
+                $messages[] = t2('Text was added for %d missing language entry.', 'Text was added for %d missing language entries.', $result['filled']);
+            }
+            if ($messages) {
+                $this->flash('success', implode(' ', $messages));
             } else {
                 $this->flash('message', t('The default categories already exist.'));
             }
