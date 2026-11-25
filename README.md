@@ -230,5 +230,45 @@ Requires concrete5 8.5.7+ and PHP 7.4+.
 2. Edit each cookie category and tick the signals it controls (for Google: `analytics_storage` for analytics, `ad_storage` + `ad_user_data` + `ad_personalization` for ads).
 3. Put the GTM/gtag loader in a category with *Load the tracking codes on every page* checked, so tags can read the default/update signals.
 4. Verify in the browser: `dataLayer` shows `consent default` (denied) first, then `consent update` after the visitor chooses.
-5. For tags without built-in consent support (e.g. Meta Pixel, Microsoft Ads, LinkedIn) in Google Tag Manager: create a trigger of type **Custom Event** named `cookie_consent_update` (all lower case, must match exactly) and use it as the tag's trigger. Also set the tag's *Additional Consent* to the signals it needs (`ad_storage`, `ad_user_data`, `ad_personalization`). Google tags (GA4, Google Ads) read the signals themselves and do not need this trigger.
-6. Check in GTM Preview / Tag Assistant: the GA4 page view shows `gcs=G100` before consent and `G111` after *Accept All*.
+
+### Google Tag Manager: tags without built-in consent support
+
+Google tags (GA4, Google Ads, Conversion Linker, Google Ads Remarketing) read the Consent Mode signals by themselves and need no extra trigger. Tags from other vendors (Meta Pixel, Microsoft Advertising, LinkedIn Insight, TikTok, custom HTML) do not, so they must be held back until the visitor has consented.
+
+On every page load with a saved choice, and again right after the visitor saves a choice, the package pushes this to `dataLayer`:
+
+```js
+{
+  event: 'cookie_consent_update',
+  cookie_consent_saved: true,            // false when no choice has been saved yet
+  cookie_consent_state: {                // granted / denied per signal
+    ad_storage: 'granted', analytics_storage: 'denied',
+    ad_user_data: 'granted', ad_personalization: 'granted',
+    functionality_storage: 'granted', personalization_storage: 'denied', security_storage: 'granted'
+  }
+}
+```
+
+Setup in GTM:
+
+1. **Triggers > New** > *Custom Event*. Name it `Cookie Consent Update` and set the event name to `cookie_consent_update`. The event name must match exactly and is all lower case.
+2. Open each non-Google tag. Under **Advanced Settings > Consent Settings**, choose *Require additional consent for tag to fire* and add the signals the tag needs. For advertising tags use `ad_storage`, `ad_user_data` and `ad_personalization`.
+3. Under **Triggering**, remove the *All Pages* / *Initialization* trigger and add the `Cookie Consent Update` trigger. The tag then fires only after consent has been granted.
+4. Use **Admin > Container Settings > Enable consent overview**, then the shield icon on the Tags page, to find tags listed under *Consent Not Configured*. Tags that have no value in the *Built-in Consent* column are the ones that need steps 2 and 3.
+5. Whenever a new tag is added to the container, check its consent settings again.
+
+If the site loads `gtag.js` directly without GTM, or only uses Google tags, this trigger is not needed.
+
+### Testing Consent Mode V2
+
+Use GTM Preview (Tag Assistant) or the browser DevTools console on a private window.
+
+| Step | Expected result |
+| --- | --- |
+| Open the site before choosing anything | `dataLayer` contains `consent default` with every signal `denied` as the first consent entry. The GA4 page view has `gcs=G100`. Non-Google tags with the `Cookie Consent Update` trigger have not fired. |
+| Click *Accept All*, then open another page | `consent update` is pushed and `cookie_consent_update` appears in the Tag Assistant summary. The GA4 page view has `gcs=G111`. The non-Google tags have now fired. |
+| Click *Reject All*, then reload | Signals stay `denied`, `gcs` stays `G100`, and non-Google tags do not fire. |
+| Choose *Save Preferences* with only Statistics on | `analytics_storage` is `granted`, the `ad_*` signals stay `denied`, and `gcs` shows `G101`. |
+| Reload after any saved choice | The saved state is restored from the `kos_consent_mode` cookie before GTM loads, so there is no `G100` flash. |
+
+In the console, `dataLayer.filter(e => e[0] === 'consent')` lists the consent commands in the order they were sent.
