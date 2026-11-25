@@ -264,3 +264,26 @@
   white-space: nowrap;
   cursor: pointer;
 }
+
+.kos-default-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.kos-default-picker__label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.kos-default-picker__select {
+  width: auto;
+  min-width: 180px;
+}
+
+.kos-default[hidden],
+.kos-default-picker[hidden],
+.kos-hint[hidden] {
+  display: none;
+}

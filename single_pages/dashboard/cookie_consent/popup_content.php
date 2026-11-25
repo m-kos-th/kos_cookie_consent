@@ -83,7 +83,7 @@ $_copyFields = ['banner_title', 'banner_summary', 'modal_title', 'modal_intro_on
               <?php } ?>
 
               <p class="kos-hint">
-                <button type="button" class="kos-default__btn" data-fill-all><?php echo t('Fill every field with the default text'); ?></button>
+                <button type="button" class="kos-default__btn" data-fill-all><?php echo t('Use all defaults'); ?></button>
               </p>
 
               <div class="kos-lang__group">

@@ -342,3 +342,30 @@ $kos-gap: 8px;
     cursor: pointer;
   }
 }
+
+// Chooses which built-in text the "Default" lines show on the category form
+.kos-default-picker {
+  display: flex;
+  align-items: center;
+  gap: $kos-gap;
+  margin-bottom: 12px;
+
+  &__label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__select {
+    width: auto;
+    min-width: 180px;
+  }
+}
+
+// Elements switched off by script (default lines, template box) must really disappear
+.kos-default[hidden],
+.kos-default-picker[hidden],
+.kos-hint[hidden] {
+  display: none;
+}

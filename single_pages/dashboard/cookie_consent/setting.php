@@ -60,6 +60,48 @@
             foreach ($_options as $_val) {
               $_bySite[$_val['site_id']][] = $_val;
             }
+            // Built-in default text, grouped by category type (Necessary, Statistics, Marketing).
+            $_defTypes = [];
+            foreach ((array) $controller->kosdesign->getDefaultCategoryDefinitions() as $_def) {
+              $_defTypes[$_def['name']] = ['label' => $_def['label'], 'content' => $_def['content']];
+            }
+            $_typedNames = [];
+            if (!empty($_post['name'])) {
+              $_typedNames[] = (string) $_post['name'];
+            }
+            // The internal name identifies the category; the per-language names are only a fallback.
+            if (empty($_typedNames) && !empty($_post['label']) && is_array($_post['label'])) {
+              foreach ($_post['label'] as $_siteLabels) {
+                foreach ((array) $_siteLabels as $_labelValue) {
+                  $_typedNames[] = (string) $_labelValue;
+                }
+              }
+            }
+            $_matchedDefault = null;
+            foreach ($_defTypes as $_typeName => $_typeDef) {
+              $_known = array_merge([$_typeName], array_values($_typeDef['label']));
+              foreach ($_typedNames as $_typed) {
+                foreach ($_known as $_knownName) {
+                  if (trim($_typed) !== '' && mb_strtolower(trim($_typed)) === mb_strtolower($_knownName)) {
+                    $_matchedDefault = $_typeName;
+                    break 3;
+                  }
+                }
+              }
+            }
+            if (!empty($_defTypes)) {
+          ?>
+          <div class="kos-default-picker" data-template-box<?php echo $_matchedDefault !== null ? ' hidden' : ''; ?>>
+            <label class="kos-default-picker__label" for="kos_template_type"><?php echo t('Start from a template'); ?></label>
+            <select id="kos_template_type" class="form-select kos-default-picker__select">
+              <?php foreach ($_defTypes as $_typeName => $_typeDef) { ?>
+                <option value="<?php echo h($_typeName); ?>"><?php echo h($_typeDef['label']['en']); ?></option>
+              <?php } ?>
+            </select>
+            <button type="button" class="kos-default__btn" data-use-template><?php echo t('Use template'); ?></button>
+          </div>
+          <?php } ?>
+          <?php
             foreach ($_bySite as $_siteid => $_langs) {
               $_multi = count($_langs) > 1;
           ?>
@@ -87,19 +129,39 @@
               $_code = $_val['language'];
               $_name = 'label[' . $_siteid . '][' . $_code . ']';
               $_content = 'content[' . $_siteid . '][' . $_code . ']';
+              $_defaultKey = $controller->kosdesign->resolveDefaultLanguageKey(isset($_val['locale']) ? $_val['locale'] : $_code);
             ?>
-              <div class="kos-lang__pane<?php echo $_i === 0 ? ' is-active' : ''; ?>" data-lang-pane="<?php echo h($_siteid . '-' . $_code); ?>">
+              <div class="kos-lang__pane<?php echo $_i === 0 ? ' is-active' : ''; ?>" data-lang-pane="<?php echo h($_siteid . '-' . $_code); ?>" data-default-key="<?php echo h($_defaultKey); ?>">
                 <?php if ($_multi) { ?>
                   <p class="kos-lang__pane-title"><?php echo h($_val['text']); ?> (<?php echo h($_code); ?>)</p>
+                <?php } ?>
+                <?php if (!empty($_defTypes)) { ?>
+                  <p class="kos-hint" data-default-ui<?php echo $_matchedDefault !== null ? '' : ' hidden'; ?>>
+                    <button type="button" class="kos-default__btn" data-fill-all><?php echo t('Use all defaults'); ?></button>
+                  </p>
                 <?php } ?>
                 <div class="kos-lang__error"><?php echo t('Please enter a name for this language.'); ?></div>
                 <div class="form-group">
                   <?php echo $form->label($_name, t('Name') . ($_multi ? ' (' . h($_val['text']) . ')' : '')) ?>
                   <?php echo $form->text($_name, isset($_post['label'][$_siteid][$_code]) ? $_post['label'][$_siteid][$_code] : null, ['class' => 'kos-lang__name']) ?>
+                  <?php if (!empty($_defTypes)) { ?>
+                    <div class="kos-default" data-default-ui<?php echo $_matchedDefault !== null ? '' : ' hidden'; ?> data-default-field="label" data-target="<?php echo h($_name); ?>">
+                      <span class="kos-default__label"><?php echo t('Default'); ?>:</span>
+                      <span class="kos-default__text"></span>
+                      <button type="button" class="kos-default__btn" data-use-default><?php echo t('Use default'); ?></button>
+                    </div>
+                  <?php } ?>
                 </div>
                 <div class="form-group">
                   <?php echo $form->label($_content, t('Description') . ($_multi ? ' (' . h($_val['text']) . ')' : '')) ?>
                   <?php echo $editor->outputStandardEditor($_content, isset($_post['content'][$_siteid][$_code]) ? $_post['content'][$_siteid][$_code] : null); ?>
+                  <?php if (!empty($_defTypes)) { ?>
+                    <div class="kos-default" data-default-ui<?php echo $_matchedDefault !== null ? '' : ' hidden'; ?> data-default-field="content" data-target="<?php echo h($_content); ?>">
+                      <span class="kos-default__label"><?php echo t('Default'); ?>:</span>
+                      <span class="kos-default__text"></span>
+                      <button type="button" class="kos-default__btn" data-use-default><?php echo t('Use default'); ?></button>
+                    </div>
+                  <?php } ?>
                 </div>
               </div>
             <?php } ?>
@@ -242,6 +304,116 @@
           $site.find('.kos-lang__tab').removeClass('is-active').filter('[data-lang-target="' + key + '"]').addClass('is-active');
           $site.find('.kos-lang__pane').removeClass('is-active').filter('[data-lang-pane="' + key + '"]').addClass('is-active');
         }
+
+        var defaultTexts = <?php echo json_encode(isset($_defTypes) ? $_defTypes : new stdClass(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        var currentType = <?php echo json_encode($_matchedDefault); ?>;
+
+        // Which built-in category (if any) do the typed names belong to?
+        function detectType() {
+          // The internal name identifies the category; the per-language names are only a fallback.
+          var typed = [$.trim($('#name').val())];
+          if (typed[0] === '') {
+            $form.find('.kos-lang__name').each(function() { typed.push($.trim($(this).val())); });
+          }
+          typed = $.map(typed, function(v) { return v.toLowerCase(); });
+          var found = null;
+          $.each(defaultTexts, function(type, def) {
+            var known = [type.toLowerCase()];
+            $.each(def.label, function(k, v) { known.push(String(v).toLowerCase()); });
+            for (var i = 0; i < typed.length; i++) {
+              if (typed[i] !== '' && $.inArray(typed[i], known) !== -1) {
+                found = type;
+                return false;
+              }
+            }
+          });
+          return found;
+        }
+
+        // Matched category: show the Default lines. Custom category: offer a template instead.
+        function applyMode() {
+          var matched = currentType !== null;
+          $form.find('[data-default-ui]').prop('hidden', !matched);
+          $form.find('[data-template-box]').prop('hidden', matched);
+          if (matched) {
+            renderDefaults();
+          }
+        }
+
+        // Show the built-in text for the matched category under each field.
+        function renderDefaults() {
+          var texts = currentType ? defaultTexts[currentType] : null;
+          if (!texts) {
+            return;
+          }
+          $form.find('.kos-lang__pane').each(function() {
+            var key = $(this).data('default-key');
+            $(this).find('.kos-default').each(function() {
+              var field = $(this).data('default-field');
+              var bucket = texts[field] || {};
+              var text = bucket[key] || bucket.en || '';
+              $(this).find('.kos-default__text').text(text).attr('title', text);
+              $(this).data('default-value', text);
+            });
+          });
+        }
+
+        // Copy the default text into a text input or a rich-text editor.
+        function setField(name, text) {
+          var $el = $form.find('[name="' + name + '"]');
+          if (!$el.length) {
+            return;
+          }
+          if ($el.is('input')) {
+            $el.val(text).trigger('input');
+            return;
+          }
+          var html = '<p>' + $('<div>').text(text).html() + '</p>';
+          var id = $el.attr('id');
+          if (window.CKEDITOR && id && CKEDITOR.instances[id]) {
+            CKEDITOR.instances[id].setData(html);
+          } else {
+            $el.val(html);
+          }
+        }
+
+        $form.on('click', '[data-use-default]', function() {
+          var $line = $(this).closest('.kos-default');
+          setField($line.data('target'), $line.data('default-value') || '');
+        });
+
+        $form.on('click', '[data-fill-all]', function() {
+          $(this).closest('.kos-lang__pane').find('.kos-default').each(function() {
+            setField($(this).data('target'), $(this).data('default-value') || '');
+          });
+        });
+
+        // Fill every language of the visible store from the chosen template.
+        $form.on('click', '[data-use-template]', function() {
+          var texts = defaultTexts[$('#kos_template_type').val()];
+          if (!texts) {
+            return;
+          }
+          var $scope = $form.find('.kos-lang:visible');
+          if (!$scope.length) {
+            $scope = $form.find('.kos-lang');
+          }
+          $scope.find('.kos-lang__pane').each(function() {
+            var key = $(this).data('default-key');
+            $(this).find('.kos-default').each(function() {
+              var field = $(this).data('default-field');
+              var bucket = texts[field] || {};
+              setField($(this).data('target'), bucket[key] || bucket.en || '');
+            });
+          });
+        });
+
+        // Re-check only when the category name itself changes, so using a template does not flip the layout.
+        $('#name').on('change', function() {
+          currentType = detectType();
+          applyMode();
+        });
+        applyMode();
 
         function showSite(siteId) {
           $('.kos-lang').removeClass('d-none').hide();
