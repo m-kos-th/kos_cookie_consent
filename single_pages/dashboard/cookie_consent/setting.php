@@ -2,6 +2,10 @@
 
 <div class="ccm-dashboard-header-buttons">
   <?php if (empty($_type)) { ?>
+    <form method="post" action="<?php echo $view->action('add_default_categories'); ?>" class="d-inline">
+      <input type="hidden" name="token" value="<?php echo $_tokenDefaults; ?>">
+      <button type="submit" class="btn btn-secondary"><?php echo t('Add default categories'); ?></button>
+    </form>
     <a class="btn btn-primary" href="<?php echo $controller->kosdesign->getLink('add'); ?>"><?php echo t('Add Cookie'); ?></a>
   <?php } ?>
 </div>

@@ -61,6 +61,13 @@ class Controller extends Package
         $pkg = parent::install();
         $this->installOrUpgrade($pkg);
 
+        try {
+            // Fresh installs start with Necessary / Statistics / Marketing so Consent Mode works out of the box.
+            $this->app->make(CookieConsentService::class)->createDefaultCategories();
+        } catch (\Throwable $e) {
+            // Optional convenience only; the editor can add the defaults from the dashboard.
+        }
+
         return $pkg;
     }
 

@@ -716,6 +716,92 @@ class CookieConsentService
         return self::CONSENT_MODE_SIGNALS;
     }
 
+    /**
+     * Default categories modelled after the common Necessary / Statistics / Marketing split.
+     * Each entry maps to Google Consent Mode V2 signals; text is provided in Thai and English.
+     */
+    public function getDefaultCategoryDefinitions()
+    {
+        return [
+            [
+                'name' => 'Necessary',
+                'always' => 1,
+                'signals' => 'functionality_storage,security_storage',
+                'label' => ['en' => 'Necessary', 'th' => 'คุกกี้ที่จำเป็น'],
+                'content' => [
+                    'en' => 'Necessary cookies make the website usable by enabling basic functions such as page navigation, security and remembering your cookie choices. The website cannot function properly without these cookies.',
+                    'th' => 'คุกกี้ที่จำเป็นช่วยให้เว็บไซต์ใช้งานได้ตามปกติ เช่น การนำทางระหว่างหน้า ความปลอดภัย และการจดจำตัวเลือกคุกกี้ของคุณ เว็บไซต์ไม่สามารถทำงานได้อย่างถูกต้องหากไม่มีคุกกี้เหล่านี้',
+                ],
+            ],
+            [
+                'name' => 'Statistics',
+                'always' => 0,
+                'signals' => 'analytics_storage',
+                'label' => ['en' => 'Statistics', 'th' => 'คุกกี้เพื่อการวิเคราะห์สถิติ'],
+                'content' => [
+                    'en' => 'Statistics cookies help us understand how visitors use the website by collecting and reporting information anonymously, so we can improve the website.',
+                    'th' => 'คุกกี้เพื่อการวิเคราะห์สถิติช่วยให้เราเข้าใจวิธีที่ผู้เยี่ยมชมใช้งานเว็บไซต์ โดยเก็บและรายงานข้อมูลแบบไม่ระบุตัวตน เพื่อนำไปปรับปรุงเว็บไซต์',
+                ],
+            ],
+            [
+                'name' => 'Marketing',
+                'always' => 0,
+                'signals' => 'ad_storage,ad_user_data,ad_personalization',
+                'label' => ['en' => 'Marketing', 'th' => 'คุกกี้เพื่อการตลาด'],
+                'content' => [
+                    'en' => 'Marketing cookies are used to measure the effectiveness of advertising and to show you ads that are more relevant to you, including on other websites.',
+                    'th' => 'คุกกี้เพื่อการตลาดใช้วัดประสิทธิภาพของโฆษณา และแสดงโฆษณาที่เกี่ยวข้องกับคุณมากขึ้น รวมถึงบนเว็บไซต์อื่น',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Creates the default categories for one site (or every site when $siteId is null).
+     * Categories whose internal name already exists on that site are left untouched.
+     *
+     * @return int number of categories created
+     */
+    public function createDefaultCategories($siteId = null)
+    {
+        $created = 0;
+        $languages = $this->getSiteLanguage();
+        $siteIds = $siteId !== null ? [(int) $siteId] : array_keys($this->getSite());
+
+        foreach ($siteIds as $currentSiteId) {
+            $existing = [];
+            foreach ($this->db->fetchAll('SELECT name FROM ' . self::TABLE_COOKIE . ' WHERE remove=? AND site_id=?', [0, (int) $currentSiteId]) as $row) {
+                $existing[strtolower((string) $row['name'])] = true;
+            }
+
+            $order = $this->DBCountCookieV2($currentSiteId);
+            foreach ($this->getDefaultCategoryDefinitions() as $definition) {
+                if (isset($existing[strtolower($definition['name'])])) {
+                    continue;
+                }
+
+                $order++;
+                $cookieId = $this->DBInsertCookie($definition['name'], 1, $definition['always'], '', '', '', $currentSiteId, $order, '', '', self::MANAGED_COOKIE_PATH_DEFAULT, $definition['signals'], 0);
+                if (!$cookieId) {
+                    continue;
+                }
+
+                foreach ($languages as $language) {
+                    if ((int) $language['site_id'] !== (int) $currentSiteId) {
+                        continue;
+                    }
+
+                    $code = isset($definition['label'][$language['language']]) ? $language['language'] : 'en';
+                    $this->DBInsertContent($cookieId, $language['page_id'], $language['language'], $definition['label'][$code], '<p>' . h($definition['content'][$code]) . '</p>');
+                }
+
+                $created++;
+            }
+        }
+
+        return $created;
+    }
+
     public function sanitizeConsentModeTypes($value)
     {
         $items = is_array($value) ? $value : preg_split('/[\s,]+/', (string) $value);

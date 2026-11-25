@@ -41,6 +41,29 @@ class Setting extends CookieConsent
         $this->set('_consentCookieSettings', $this->kosdesign->getConsentCookieSettings());
         $this->set('_consentModeSettings', $this->kosdesign->getConsentModeSettings());
         $this->set('_tokenConsentMode', $this->token->generate('cookie_consent_mode'));
+        $this->set('_tokenDefaults', $this->token->generate('cookie_consent_defaults'));
+    }
+
+    public function add_default_categories()
+    {
+        if (!$this->token->validate('cookie_consent_defaults', $this->post('token'))) {
+            $this->flash('error', $this->token->getErrorMessage());
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
+        try {
+            $created = $this->kosdesign->createDefaultCategories();
+            if ($created > 0) {
+                $this->flash('success', t2('%d default category was added.', '%d default categories were added.', $created));
+            } else {
+                $this->flash('message', t('The default categories already exist.'));
+            }
+        } catch (\Throwable $e) {
+            $this->flash('error', t('Unable to add the default categories right now.'));
+        }
+
+        return $this->redirect('/dashboard/cookie_consent/setting');
     }
 
     public function save_consent_mode()
