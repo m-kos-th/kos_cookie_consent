@@ -12,6 +12,27 @@ defined('C5_EXECUTE') or die('Access Denied.');
 
 class Setting extends CookieConsent
 {
+    public function on_start()
+    {
+        parent::on_start();
+        $this->addDashboardStylesheet();
+    }
+
+    /**
+     * Load the compiled stylesheet (assets/scss/dashboard-setting.scss) for this page.
+     */
+    protected function addDashboardStylesheet()
+    {
+        try {
+            $pkg = $this->app->make('Concrete\\Core\\Package\\PackageService')->getClass('kos_cookie_consent');
+            if ($pkg) {
+                $this->addHeaderItem('<link rel="stylesheet" href="' . h($pkg->getRelativePath()) . '/assets/css/dashboard-setting.css?v=' . h($pkg->getPackageVersion()) . '">');
+            }
+        } catch (\Throwable $e) {
+            // Styling is cosmetic; never block the dashboard page.
+        }
+    }
+
     public function view()
     {
         $data = $this->request->query->all();

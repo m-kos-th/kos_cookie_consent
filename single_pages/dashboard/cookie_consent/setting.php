@@ -2,11 +2,13 @@
 
 <div class="ccm-dashboard-header-buttons">
   <?php if (empty($_type)) { ?>
-    <form method="post" action="<?php echo $view->action('add_default_categories'); ?>" class="d-inline">
-      <input type="hidden" name="token" value="<?php echo $_tokenDefaults; ?>">
-      <button type="submit" class="btn btn-secondary"><?php echo t('Add default categories'); ?></button>
-    </form>
-    <a class="btn btn-primary" href="<?php echo $controller->kosdesign->getLink('add'); ?>"><?php echo t('Add Cookie'); ?></a>
+    <div class="kos-actions">
+      <form method="post" action="<?php echo $view->action('add_default_categories'); ?>" class="kos-actions__form">
+        <input type="hidden" name="token" value="<?php echo $_tokenDefaults; ?>">
+        <button type="submit" class="btn btn-secondary kos-actions__btn"><?php echo t('Add default categories'); ?></button>
+      </form>
+      <a class="btn btn-primary kos-actions__btn" href="<?php echo $controller->kosdesign->getLink('add'); ?>"><?php echo t('Add category'); ?></a>
+    </div>
   <?php } ?>
 </div>
 <div class="setting">
@@ -18,7 +20,8 @@
       ?>
       <form method="post" action="<?php echo $view->action('save', isset($id) ? $id : null); ?>">
         <fieldset>
-          <legend><?php echo t('Cookie type name') ?></legend>
+          <legend><?php echo t('Category name') ?></legend>
+          <p class="kos-hint"><?php echo t('Shown only in this dashboard. Visitors see the names you enter per language below.'); ?></p>
           <div class="form-group">
             <?php echo $form->text('name', isset($_post['name']) ? $_post['name'] : '', ['required' => 'required']) ?>
           </div>
@@ -36,39 +39,21 @@
             <?php echo $form->select('site_id', $_option, isset($_post['site_id']) ? $_post['site_id'] : null, ['required' => 'required']);?>
           </div>
           <?php } ?>
-          <legend><?php echo t('Enable') ?></legend>
+          <legend><?php echo t('Status') ?></legend>
           <div class="form-group">
             <div class="form-check">
               <?php echo $form->checkbox('active', '1', isset($_post['active']) ? $_post['active'] : '0') ?>
-              <label class="form-check-label" for="active"><?php echo t('Enable the cookie option on the website.') ?></label>
+              <label class="form-check-label" for="active"><?php echo t('Show this category on the website') ?></label>
             </div>
-          </div>
-          <legend><?php echo t('Always active?') ?></legend>
-          <div class="form-group">
             <div class="form-check">
               <?php echo $form->checkbox('always', '1', isset($_post['always']) ? $_post['always'] : '1') ?>
-              <label class="form-check-label" for="always"><?php echo t('If always active. Users cannot disable cookies.') ?></label>
+              <label class="form-check-label" for="always"><?php echo t('Always active (visitors cannot turn it off)') ?></label>
             </div>
           </div>
         </fieldset>
         <hr>
         <fieldset>
-          <legend><?php echo t('Cookies') ?></legend>
-          <style>
-            .kos-lang-site{border:1px solid #dcdcdc;border-radius:4px;margin-bottom:20px;background:#fff}
-            .kos-lang-help{padding:10px 15px;background:#f6f8fa;border-bottom:1px solid #dcdcdc;font-size:13px}
-            .kos-lang-tabs{display:flex;flex-wrap:wrap;gap:0;margin:0;padding:0;list-style:none;border-bottom:1px solid #dcdcdc;background:#fafafa}
-            .kos-lang-tab{appearance:none;border:0;border-right:1px solid #dcdcdc;background:transparent;padding:10px 16px;cursor:pointer;font-size:14px;color:#333}
-            .kos-lang-tab:hover{background:#f0f0f0}
-            .kos-lang-tab.is-active{background:#fff;font-weight:600;box-shadow:inset 0 -3px 0 #2d7ff9}
-            .kos-lang-status{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600}
-            .kos-lang-status.is-done{background:#d9f2e1;color:#1b6b34}
-            .kos-lang-status.is-missing{background:#fde1e1;color:#a32121}
-            .kos-lang-pane{display:none;padding:15px}
-            .kos-lang-pane.is-active{display:block}
-            .kos-lang-pane-title{margin:0 0 12px;font-size:15px;font-weight:600}
-            .kos-lang-error{display:none;margin:0 0 12px;padding:8px 12px;border-radius:4px;background:#fde1e1;color:#a32121;font-size:13px}
-          </style>
+          <legend><?php echo t('Text shown to visitors') ?></legend>
           <?php
             $_options = $controller->kosdesign->getSiteLanguage();
             $_bySite = [];
@@ -78,21 +63,21 @@
             foreach ($_bySite as $_siteid => $_langs) {
               $_multi = count($_langs) > 1;
           ?>
-          <div class="kos-lang-site d-none" data-site="<?php echo (int) $_siteid; ?>" style="display:none">
-            <div class="kos-lang-help">
+          <div class="kos-lang d-none" data-site="<?php echo (int) $_siteid; ?>" style="display:none">
+            <div class="kos-lang__help">
               <?php if ($_multi) { ?>
-                <?php echo t('This site has %d languages. Fill in the Name for every language tab. Visitors see the text that matches the language of the page they are viewing.', count($_langs)); ?>
+                <?php echo t('Fill in a name for each language. Visitors see their own language.'); ?>
               <?php } else { ?>
-                <?php echo t('Enter the name and description shown to visitors.'); ?>
+                <?php echo t('Enter the name and description visitors will see.'); ?>
               <?php } ?>
             </div>
             <?php if ($_multi) { ?>
-              <ul class="kos-lang-tabs" role="tablist">
+              <ul class="kos-lang__tabs" role="tablist">
                 <?php foreach ($_langs as $_i => $_val) { ?>
                   <li>
-                    <button type="button" class="kos-lang-tab<?php echo $_i === 0 ? ' is-active' : ''; ?>" role="tab" data-lang-target="<?php echo h($_siteid . '-' . $_val['language']); ?>">
+                    <button type="button" class="kos-lang__tab<?php echo $_i === 0 ? ' is-active' : ''; ?>" role="tab" data-lang-target="<?php echo h($_siteid . '-' . $_val['language']); ?>">
                       <?php echo h($_val['text']); ?> <small class="text-muted">(<?php echo h($_val['language']); ?>)</small>
-                      <span class="kos-lang-status is-missing"><?php echo t('Required'); ?></span>
+                      <span class="kos-lang__status is-missing"><?php echo t('Required'); ?></span>
                     </button>
                   </li>
                 <?php } ?>
@@ -103,14 +88,14 @@
               $_name = 'label[' . $_siteid . '][' . $_code . ']';
               $_content = 'content[' . $_siteid . '][' . $_code . ']';
             ?>
-              <div class="kos-lang-pane<?php echo $_i === 0 ? ' is-active' : ''; ?>" data-lang-pane="<?php echo h($_siteid . '-' . $_code); ?>">
+              <div class="kos-lang__pane<?php echo $_i === 0 ? ' is-active' : ''; ?>" data-lang-pane="<?php echo h($_siteid . '-' . $_code); ?>">
                 <?php if ($_multi) { ?>
-                  <p class="kos-lang-pane-title"><?php echo h($_val['text']); ?> (<?php echo h($_code); ?>)</p>
+                  <p class="kos-lang__pane-title"><?php echo h($_val['text']); ?> (<?php echo h($_code); ?>)</p>
                 <?php } ?>
-                <div class="kos-lang-error"><?php echo t('Please enter a name for this language.'); ?></div>
+                <div class="kos-lang__error"><?php echo t('Please enter a name for this language.'); ?></div>
                 <div class="form-group">
                   <?php echo $form->label($_name, t('Name') . ($_multi ? ' (' . h($_val['text']) . ')' : '')) ?>
-                  <?php echo $form->text($_name, isset($_post['label'][$_siteid][$_code]) ? $_post['label'][$_siteid][$_code] : null, ['class' => 'kos-lang-name']) ?>
+                  <?php echo $form->text($_name, isset($_post['label'][$_siteid][$_code]) ? $_post['label'][$_siteid][$_code] : null, ['class' => 'kos-lang__name']) ?>
                 </div>
                 <div class="form-group">
                   <?php echo $form->label($_content, t('Description') . ($_multi ? ' (' . h($_val['text']) . ')' : '')) ?>
@@ -120,78 +105,96 @@
             <?php } ?>
           </div>
           <?php } ?>
-          <div class="form-group">
-            <?php echo $form->label('code_header', t('Header Tracking Codes')) ?>
-            <?php echo $form->textarea('code_header', isset($_post['code_header']) ? $_post['code_header'] : '', ['style' => 'height: 150px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
-          </div>
-          <div class="form-group">
-            <?php echo $form->label('code_body', t('Body Tracking Codes')) ?>
-            <?php echo $form->textarea('code_body', isset($_post['code_body']) ? $_post['code_body'] : '', ['style' => 'height: 150px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
-          </div>
-          <div class="form-group">
-            <?php echo $form->label('code_footer', t('Footer Tracking Codes')) ?>
-            <?php echo $form->textarea('code_footer', isset($_post['code_footer']) ? $_post['code_footer'] : '', ['style' => 'height: 150px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
-          </div>
-          <hr>
-          <legend><?php echo t('Google Consent Mode V2') ?></legend>
           <?php
             $_postedModeTypes = isset($_post['consent_mode_types']) ? $_post['consent_mode_types'] : [];
             $_selectedModeTypes = $controller->kosdesign->parseConsentModeTypes($_postedModeTypes);
+            $_signalLabels = [
+              'ad_storage' => t('Store advertising cookies'),
+              'analytics_storage' => t('Store analytics cookies (visit statistics)'),
+              'ad_user_data' => t('Send visitor data to Google for ads'),
+              'ad_personalization' => t('Show personalized ads'),
+              'functionality_storage' => t('Store site features (e.g. language choice)'),
+              'personalization_storage' => t('Store personalization (e.g. recommendations)'),
+              'security_storage' => t('Store security and fraud-prevention data'),
+            ];
+            $_hasCodes = !empty($_post['code_header']) || !empty($_post['code_body']) || !empty($_post['code_footer']);
+            $_hasCleanup = !empty($_post['managed_cookie_names']) || !empty($_post['managed_cookie_domain']);
           ?>
-          <div class="form-group">
-            <label><?php echo t('Consent signals granted by this category') ?></label>
+          <div class="kos-section">
+            <h3 class="kos-section__title"><?php echo t('Google Consent Mode V2') ?></h3>
+            <p class="kos-hint"><?php echo t('What Google may do once a visitor accepts this category. Used only when Consent Mode is turned on.'); ?></p>
+            <p class="kos-hint">
+              <?php echo t('Not sure which signals belong to this category? Read:'); ?>
+              <a class="kos-hint__link" href="https://support.google.com/analytics/answer/12334711" target="_blank" rel="noopener noreferrer"><?php echo t('Consent types explained'); ?></a>
+              &middot;
+              <a class="kos-hint__link" href="https://developers.google.com/tag-platform/security/guides/consent" target="_blank" rel="noopener noreferrer"><?php echo t('Set up consent mode on websites'); ?></a>
+            </p>
             <?php foreach ((isset($_consentModeSignals) ? $_consentModeSignals : []) as $_signal) { ?>
-              <div class="form-check">
+              <div class="form-check kos-signal">
                 <input type="checkbox" class="form-check-input" id="consent_mode_types_<?php echo h($_signal); ?>" name="consent_mode_types[]" value="<?php echo h($_signal); ?>"<?php echo in_array($_signal, $_selectedModeTypes, true) ? ' checked' : ''; ?>>
-                <label class="form-check-label" for="consent_mode_types_<?php echo h($_signal); ?>"><code><?php echo h($_signal); ?></code></label>
+                <label class="form-check-label" for="consent_mode_types_<?php echo h($_signal); ?>">
+                  <code><?php echo h($_signal); ?></code>
+                  <?php if (isset($_signalLabels[$_signal])) { ?><small class="kos-signal__desc"><?php echo h($_signalLabels[$_signal]); ?></small><?php } ?>
+                </label>
               </div>
             <?php } ?>
-            <small class="form-text text-muted">
-              <?php echo t('Used only when Consent Mode is enabled in Setting. Signals start as denied and switch to granted when the visitor accepts this category (always-active categories are granted by default). Google Consent Mode V2 requires %s, %s, %s and %s.', 'ad_storage', 'analytics_storage', 'ad_user_data', 'ad_personalization'); ?>
-            </small>
           </div>
-          <div class="form-group">
-            <div class="form-check">
-              <?php echo $form->checkbox('code_always_load', '1', !empty($_post['code_always_load']) ? '1' : '0') ?>
-              <label class="form-check-label" for="code_always_load"><?php echo t('Load the tracking codes above on every page, regardless of consent') ?></label>
-            </div>
-            <small class="form-text text-muted">
-              <?php echo t('Use for a GTM/gtag loader that must run with Consent Mode so it can read the default and update signals. Do not enable this for tags that ignore Consent Mode.'); ?>
-            </small>
-          </div>
-          <hr>
-          <legend><?php echo t('Managed Cookie Cleanup') ?></legend>
-          <div class="form-group">
-            <?php echo $form->label('managed_cookie_names', t('Cookies to clear on withdrawal')) ?>
-            <?php echo $form->textarea('managed_cookie_names', isset($_post['managed_cookie_names']) ? $_post['managed_cookie_names'] : '', ['style' => 'height: 140px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false', 'placeholder' => "_ga\n_gid\n_ga_*"]) ?>
-            <small class="form-text text-muted">
-              <?php echo t('Enter one first-party cookie name per line. Use * only at the end for prefix matches, for example %s.', '_ga_*'); ?>
-            </small>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group">
-                <?php echo $form->label('managed_cookie_domain', t('Cookie domain override')) ?>
-                <?php echo $form->text('managed_cookie_domain', isset($_post['managed_cookie_domain']) ? $_post['managed_cookie_domain'] : '', ['placeholder' => 'example.com']) ?>
-                <small class="form-text text-muted">
-                  <?php echo t('Optional. Leave blank for host-only plus current-domain cleanup attempts.'); ?>
-                </small>
+
+          <div class="kos-section">
+            <h3 class="kos-section__title"><?php echo t('Tracking codes') ?></h3>
+            <p class="kos-hint"><?php echo t('Optional. Scripts added here load after the visitor accepts this category.'); ?></p>
+            <details class="kos-more"<?php echo $_hasCodes ? ' open' : ''; ?>>
+              <summary class="kos-more__summary"><?php echo t('Header, body and footer codes'); ?></summary>
+              <div class="kos-more__body">
+                <div class="form-group">
+                  <?php echo $form->label('code_header', t('Header Tracking Codes')) ?>
+                  <?php echo $form->textarea('code_header', isset($_post['code_header']) ? $_post['code_header'] : '', ['style' => 'height: 110px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
+                </div>
+                <div class="form-group">
+                  <?php echo $form->label('code_body', t('Body Tracking Codes')) ?>
+                  <?php echo $form->textarea('code_body', isset($_post['code_body']) ? $_post['code_body'] : '', ['style' => 'height: 110px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
+                </div>
+                <div class="form-group">
+                  <?php echo $form->label('code_footer', t('Footer Tracking Codes')) ?>
+                  <?php echo $form->textarea('code_footer', isset($_post['code_footer']) ? $_post['code_footer'] : '', ['style' => 'height: 110px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
+                </div>
+                <div class="form-check">
+                  <?php echo $form->checkbox('code_always_load', '1', !empty($_post['code_always_load']) ? '1' : '0') ?>
+                  <label class="form-check-label" for="code_always_load"><?php echo t('Load these codes on every page, regardless of consent') ?></label>
+                </div>
+                <p class="kos-hint"><?php echo t('Only for a GTM/gtag loader that reads the Consent Mode signals.'); ?></p>
               </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <?php echo $form->label('managed_cookie_path', t('Cookie path')) ?>
-                <?php echo $form->text('managed_cookie_path', isset($_post['managed_cookie_path']) ? $_post['managed_cookie_path'] : '/', ['placeholder' => '/']) ?>
-                <small class="form-text text-muted">
-                  <?php echo t('Default is %s. The cleanup helper also tries common path variants below the current page.', '/'); ?>
-                </small>
-              </div>
-            </div>
+            </details>
           </div>
-          <div class="alert alert-info">
-            <?php echo t('Use this for cookies that your site writes on its own domain, such as analytics or marketing cookies. Do not add %s, %s, or %s here because those are required to remember the visitor consent choice.', 'kos_cookie_consent_id', 'consent', 'consent_version'); ?>
-            <br>
-            <?php echo t('Browser privacy rules prevent this package from deleting third-party cookies that live on another vendor domain, and HttpOnly cookies cannot be removed from frontend JavaScript.'); ?>
+
+          <div class="kos-section">
+            <h3 class="kos-section__title"><?php echo t('Cookie cleanup') ?></h3>
+            <p class="kos-hint"><?php echo t('Cookies removed when a visitor withdraws consent.'); ?></p>
+            <details class="kos-more"<?php echo $_hasCleanup ? ' open' : ''; ?>>
+              <summary class="kos-more__summary"><?php echo t('Cookies to remove'); ?></summary>
+              <div class="kos-more__body">
+                <div class="form-group">
+                  <?php echo $form->label('managed_cookie_names', t('Cookie names')) ?>
+                  <?php echo $form->textarea('managed_cookie_names', isset($_post['managed_cookie_names']) ? $_post['managed_cookie_names'] : '', ['style' => 'height: 110px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false', 'placeholder' => "_ga\n_gid\n_ga_*"]) ?>
+                  <p class="kos-hint"><?php echo t('One name per line. Use * at the end for a prefix, e.g. %s.', '_ga_*'); ?></p>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <?php echo $form->label('managed_cookie_domain', t('Cookie domain (optional)')) ?>
+                      <?php echo $form->text('managed_cookie_domain', isset($_post['managed_cookie_domain']) ? $_post['managed_cookie_domain'] : '', ['placeholder' => 'example.com']) ?>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <?php echo $form->label('managed_cookie_path', t('Cookie path')) ?>
+                      <?php echo $form->text('managed_cookie_path', isset($_post['managed_cookie_path']) ? $_post['managed_cookie_path'] : '/', ['placeholder' => '/']) ?>
+                    </div>
+                  </div>
+                </div>
+                <p class="kos-hint"><?php echo t('Your own site cookies only. Do not add %s, %s or %s. Cookies on other domains and HttpOnly cookies cannot be removed.', 'kos_cookie_consent_id', 'consent', 'consent_version'); ?></p>
+              </div>
+            </details>
           </div>
         </fieldset>
 
@@ -219,38 +222,38 @@
         var $form = $('#site_id').closest('form');
 
         function sitePanel(siteId) {
-          return $('.kos-lang-site[data-site="' + siteId + '"]');
+          return $('.kos-lang[data-site="' + siteId + '"]');
         }
 
         function refreshStatus($site) {
-          $site.find('.kos-lang-pane').each(function() {
+          $site.find('.kos-lang__pane').each(function() {
             var $pane = $(this);
             var key = $pane.data('lang-pane');
-            var done = $.trim($pane.find('.kos-lang-name').val()) !== '';
-            var $badge = $site.find('.kos-lang-tab[data-lang-target="' + key + '"] .kos-lang-status');
+            var done = $.trim($pane.find('.kos-lang__name').val()) !== '';
+            var $badge = $site.find('.kos-lang__tab[data-lang-target="' + key + '"] .kos-lang__status');
             $badge.toggleClass('is-done', done).toggleClass('is-missing', !done).text(done ? '\u2713' : <?php echo json_encode(t('Required')); ?>);
             if (done) {
-              $pane.find('.kos-lang-error').hide();
+              $pane.find('.kos-lang__error').hide();
             }
           });
         }
 
         function activate($site, key) {
-          $site.find('.kos-lang-tab').removeClass('is-active').filter('[data-lang-target="' + key + '"]').addClass('is-active');
-          $site.find('.kos-lang-pane').removeClass('is-active').filter('[data-lang-pane="' + key + '"]').addClass('is-active');
+          $site.find('.kos-lang__tab').removeClass('is-active').filter('[data-lang-target="' + key + '"]').addClass('is-active');
+          $site.find('.kos-lang__pane').removeClass('is-active').filter('[data-lang-pane="' + key + '"]').addClass('is-active');
         }
 
         function showSite(siteId) {
-          $('.kos-lang-site').removeClass('d-none').hide();
+          $('.kos-lang').removeClass('d-none').hide();
           if (!siteId) {
             return;
           }
           var $site = sitePanel(siteId).show();
           refreshStatus($site);
-          var $panes = $site.find('.kos-lang-pane');
-          var anyFilled = $panes.find('.kos-lang-name').filter(function() { return $.trim($(this).val()) !== ''; }).length > 0;
+          var $panes = $site.find('.kos-lang__pane');
+          var anyFilled = $panes.find('.kos-lang__name').filter(function() { return $.trim($(this).val()) !== ''; }).length > 0;
           if (anyFilled) {
-            var $firstMissing = $panes.filter(function() { return $.trim($(this).find('.kos-lang-name').val()) === ''; }).first();
+            var $firstMissing = $panes.filter(function() { return $.trim($(this).find('.kos-lang__name').val()) === ''; }).first();
             if ($firstMissing.length) {
               activate($site, $firstMissing.data('lang-pane'));
             }
@@ -260,12 +263,12 @@
         showSite($('#site_id').val());
         $('#site_id').on('change', function() { showSite($(this).val()); });
 
-        $form.on('click', '.kos-lang-tab', function() {
-          activate($(this).closest('.kos-lang-site'), $(this).data('lang-target'));
+        $form.on('click', '.kos-lang__tab', function() {
+          activate($(this).closest('.kos-lang'), $(this).data('lang-target'));
         });
 
-        $form.on('input change', '.kos-lang-name', function() {
-          refreshStatus($(this).closest('.kos-lang-site'));
+        $form.on('input change', '.kos-lang__name', function() {
+          refreshStatus($(this).closest('.kos-lang'));
         });
 
         // Stop the submit and jump to the first language tab that still needs a name.
@@ -275,129 +278,40 @@
             return;
           }
           var $site = sitePanel(siteId);
-          var $missing = $site.find('.kos-lang-pane').filter(function() {
-            return $.trim($(this).find('.kos-lang-name').val()) === '';
+          var $missing = $site.find('.kos-lang__pane').filter(function() {
+            return $.trim($(this).find('.kos-lang__name').val()) === '';
           });
           if ($missing.length) {
             e.preventDefault();
             refreshStatus($site);
             activate($site, $missing.first().data('lang-pane'));
-            $missing.first().find('.kos-lang-error').show();
-            $missing.first().find('.kos-lang-name').trigger('focus');
+            $missing.first().find('.kos-lang__error').show();
+            $missing.first().find('.kos-lang__name').trigger('focus');
           }
         });
       });
     </script>
   <?php } else { ?>
-  <div class="card mb-4">
-    <div class="card-body">
-      <h3 class="h5 mb-3"><?php echo t('Consent Cookie Retention'); ?></h3>
-      <p class="text-muted">
-        <?php echo t('This controls the first-party consent cookies created by this package: %s, %s, and %s.', 'kos_cookie_consent_id', 'consent', 'consent_version'); ?>
-      </p>
-      <form method="post" action="<?php echo $view->action('save_preferences'); ?>">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3">
-            <div class="form-group">
-              <label for="consent_cookie_lifetime_days"><?php echo t('Retention (days)'); ?></label>
-              <input
-                type="number"
-                min="<?php echo isset($_consentCookieSettings['min_days']) ? (int) $_consentCookieSettings['min_days'] : 1; ?>"
-                max="<?php echo isset($_consentCookieSettings['max_days']) ? (int) $_consentCookieSettings['max_days'] : 400; ?>"
-                step="1"
-                class="form-control"
-                id="consent_cookie_lifetime_days"
-                name="consent_cookie_lifetime_days"
-                value="<?php echo isset($_consentCookieSettings['consent_cookie_lifetime_days']) ? (int) $_consentCookieSettings['consent_cookie_lifetime_days'] : 30; ?>"
-                required
-              >
-            </div>
-          </div>
-          <div class="col-md-9">
-            <p class="small text-muted mb-2">
-              <?php echo t('Allowed range: %s to %s days. Modern browsers cap persistent cookie expiry, so values above this range are not allowed.', isset($_consentCookieSettings['min_days']) ? (int) $_consentCookieSettings['min_days'] : 1, isset($_consentCookieSettings['max_days']) ? (int) $_consentCookieSettings['max_days'] : 400); ?>
-            </p>
-            <p class="small text-muted mb-0">
-              <?php echo t('The package writes these cookies with Path=/, SameSite=Lax, and Secure when the site is served over HTTPS. Third-party cookies created by injected tracking scripts must be configured inside those scripts separately.'); ?>
-            </p>
-          </div>
-        </div>
-        <div class="mt-3 text-end">
-          <input type="hidden" name="token" value="<?php echo $_tokenSettings; ?>">
-          <button type="submit" class="btn btn-primary"><?php echo t('Save retention'); ?></button>
-        </div>
-      </form>
-    </div>
-  </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <h3 class="h5 mb-3"><?php echo t('Google Consent Mode V2'); ?></h3>
-      <p class="text-muted">
-        <?php echo t('When enabled, the package registers a default consent state (all denied) in the page head before any tag runs, then sends an update with the visitor choice. Map each category to its signals when adding or editing a cookie.'); ?>
-      </p>
-      <form method="post" action="<?php echo $view->action('save_consent_mode'); ?>">
-        <div class="form-check mb-3">
-          <input type="checkbox" class="form-check-input" id="consent_mode_enabled" name="consent_mode_enabled" value="1"<?php echo !empty($_consentModeSettings['enabled']) ? ' checked' : ''; ?>>
-          <label class="form-check-label" for="consent_mode_enabled"><?php echo t('Enable Consent Mode V2'); ?></label>
-        </div>
-        <div class="row g-3">
-          <div class="col-md-3">
-            <div class="form-group">
-              <label for="consent_mode_wait_for_update"><?php echo t('Wait for update (ms)'); ?></label>
-              <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
-            </div>
-          </div>
-          <div class="col-md-9">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="consent_mode_ads_data_redaction" name="consent_mode_ads_data_redaction" value="1"<?php echo !empty($_consentModeSettings['ads_data_redaction']) ? ' checked' : ''; ?>>
-              <label class="form-check-label" for="consent_mode_ads_data_redaction"><code>ads_data_redaction</code> <?php echo t('(redact ad click identifiers while ad_storage is denied)'); ?></label>
-            </div>
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="consent_mode_url_passthrough" name="consent_mode_url_passthrough" value="1"<?php echo !empty($_consentModeSettings['url_passthrough']) ? ' checked' : ''; ?>>
-              <label class="form-check-label" for="consent_mode_url_passthrough"><code>url_passthrough</code> <?php echo t('(pass ad click information through URL parameters)'); ?></label>
-            </div>
-          </div>
-        </div>
-        <div class="mt-3 text-end">
-          <input type="hidden" name="token" value="<?php echo $_tokenConsentMode; ?>">
-          <button type="submit" class="btn btn-primary"><?php echo t('Save Consent Mode'); ?></button>
-        </div>
-      </form>
-    </div>
-  </div>
-  <form class="form form-booking-search" method="get" action="<?php echo $view->action('') ?>">
-    <div class="row g-2">
-      <?php
-        $_optionSite = $controller->kosdesign->getSiteLanguage();
-        if (!empty($_optionSite)) {
-          $_option = ['' => t('All Stores')];
-
-          foreach ($_optionSite as $_val) {
-            $_option[$_val['site_id']] = $_val['site_name'];
-          }
-      ?>
-      <div class="col-md-3">
-        <div class="form-group">
-          <?php echo $form->select('site_id', $_option, isset($_post['site_id']) ? $_post['site_id'] : null);?>
-        </div>
-      </div>
-      <?php } ?>
-      <div class="col" style="max-width: 120px;">
-        <div class="form-action">
-          <button type="submit" class="btn btn-primary ccm-input-submit" style="width: 100%;"><?php echo t('Submit'); ?></button>
-        </div>
-      </div>
-    </div>
-  </form>
+  <?php
+    $_siteChoices = [];
+    foreach ((array) $controller->kosdesign->getSiteLanguage() as $_s) {
+      $_siteChoices[$_s['site_id']] = $_s['site_name'];
+    }
+    $_multiSite = count($_siteChoices) > 1;
+  ?>
+  <?php if ($_multiSite) { ?>
+    <form class="kos-filter" method="get" action="<?php echo $view->action('') ?>">
+      <label for="site_id"><?php echo t('Store'); ?></label>
+      <?php echo $form->select('site_id', ['' => t('All Stores')] + $_siteChoices, isset($_post['site_id']) ? $_post['site_id'] : null, ['onchange' => 'this.form.submit()']); ?>
+    </form>
+  <?php } ?>
   <table border="0" cellspacing="1" cellpadding="0" class="table table-striped setting-table" id="cookie-sort-table">
     <thead>
       <tr>
         <th class="td-other" style="width: 48px;"></th>
-        <th class="td-name"><?php echo t('Name'); ?></th>
-        <th class="td-other"><?php echo t('Store'); ?></th>
-        <th class="td-other"><?php echo t('Sort'); ?></th>
-        <th class="td-other"><?php echo t('Enable'); ?></th>
-        <th class="td-other"><?php echo t('Always active?'); ?></th>
+        <th class="td-name"><?php echo t('Category'); ?></th>
+        <th class="td-other"><?php echo t('Consent signals'); ?></th>
+        <th class="td-other"><?php echo t('Status'); ?></th>
         <th class="td-other"><?php echo t('Updated'); ?> (<?php echo h($controller->kosdesign->getDisplayTimezoneLabel()); ?>)</th>
         <th class="td-action"></th>
       </tr>
@@ -405,13 +319,29 @@
     <tbody>
       <?php if (!empty($result)) { ?>
         <?php foreach ($result as $val) { ?>
+          <?php $_rowSignals = $controller->kosdesign->parseConsentModeTypes(isset($val['consent_mode_types']) ? $val['consent_mode_types'] : ''); ?>
           <tr draggable="true" data-sort-id="<?php echo (int) $val['id']; ?>" data-site-id="<?php echo (int) $val['site_id']; ?>">
-            <td class="text-center align-middle" style="cursor: move; user-select: none;">&#x2630;</td>
-            <td><?php echo $val['name']; ?></td>
-            <td><?php echo $val['store_name']; ?></td>
-            <td><?php echo isset($val['sort_order']) ? (int) $val['sort_order'] : 0; ?></td>
-            <td><?php echo $val['active'] ? 'Yes' : 'No'; ?></td>
-            <td><?php echo $val['always'] ? 'Yes' : 'No'; ?></td>
+            <td class="text-center align-middle kos-table__handle" title="<?php echo h(t('Drag to change the order')); ?>">&#x2630;</td>
+            <td>
+              <strong><?php echo h($val['name']); ?></strong>
+              <?php if ($_multiSite) { ?><div class="kos-hint kos-hint--flush"><?php echo h($val['store_name']); ?></div><?php } ?>
+            </td>
+            <td>
+              <?php if ($_rowSignals) { ?>
+                <?php foreach ($_rowSignals as $_sig) { ?><span class="kos-badge kos-badge--signal"><?php echo h($_sig); ?></span><?php } ?>
+              <?php } else { ?>
+                <span class="text-muted">&mdash;</span>
+              <?php } ?>
+            </td>
+            <td>
+              <?php if (!$val['active']) { ?>
+                <span class="kos-badge kos-badge--hidden"><?php echo t('Hidden'); ?></span>
+              <?php } elseif ($val['always']) { ?>
+                <span class="kos-badge kos-badge--always"><?php echo t('Always on'); ?></span>
+              <?php } else { ?>
+                <span class="kos-badge kos-badge--optional"><?php echo t('Visitor can choose'); ?></span>
+              <?php } ?>
+            </td>
             <td><?php echo h($controller->kosdesign->formatLogTimestamp($val['updated'])); ?></td>
             <td class="text-end td-action">
               <div class="btn-group">
@@ -424,12 +354,77 @@
       <?php } else { ?>
         <tr>
           <td colspan="99">
-            <p class="empty text-center" style="margin: 12px 0;"><?php echo t('No information available.'); ?></p>
+            <p class="empty text-center kos-table__empty"><?php echo t('No categories yet. Click "Add default categories" to get started.'); ?></p>
           </td>
         </tr>
       <?php } ?>
     </tbody>
   </table>
+
+  <div class="kos-settings">
+  <h3 class="kos-settings__title"><?php echo t('Settings'); ?></h3>
+  <div class="kos-settings__grid">
+    <div class="kos-card">
+      <h4 class="kos-card__title"><?php echo t('Google Consent Mode V2'); ?></h4>
+      <p class="kos-hint"><?php echo t('Tells Google tags what the visitor allowed. Needed for Google Analytics and Google Ads.'); ?></p>
+      <form method="post" action="<?php echo $view->action('save_consent_mode'); ?>">
+        <div class="form-check kos-field">
+          <input type="checkbox" class="form-check-input" id="consent_mode_enabled" name="consent_mode_enabled" value="1"<?php echo !empty($_consentModeSettings['enabled']) ? ' checked' : ''; ?>>
+          <label class="form-check-label" for="consent_mode_enabled"><?php echo t('Turn on Consent Mode V2'); ?></label>
+        </div>
+        <div class="kos-field">
+          <label for="consent_mode_wait_for_update"><?php echo t('Wait for visitor choice (ms)'); ?></label>
+          <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
+          <p class="kos-hint kos-hint--tight"><?php echo t('Recommended: 500.'); ?></p>
+        </div>
+        <details class="kos-more">
+          <summary class="kos-more__summary"><?php echo t('Advanced options'); ?></summary>
+          <div class="kos-more__body">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="consent_mode_ads_data_redaction" name="consent_mode_ads_data_redaction" value="1"<?php echo !empty($_consentModeSettings['ads_data_redaction']) ? ' checked' : ''; ?>>
+              <label class="form-check-label" for="consent_mode_ads_data_redaction"><?php echo t('Hide ad click IDs while ad cookies are denied'); ?> <code>ads_data_redaction</code></label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="consent_mode_url_passthrough" name="consent_mode_url_passthrough" value="1"<?php echo !empty($_consentModeSettings['url_passthrough']) ? ' checked' : ''; ?>>
+              <label class="form-check-label" for="consent_mode_url_passthrough"><?php echo t('Keep ad click info in page URLs'); ?> <code>url_passthrough</code></label>
+            </div>
+          </div>
+        </details>
+        <input type="hidden" name="token" value="<?php echo $_tokenConsentMode; ?>">
+        <button type="submit" class="btn btn-primary"><?php echo t('Save'); ?></button>
+      </form>
+    </div>
+    <div class="kos-card">
+      <h4 class="kos-card__title"><?php echo t('Remember the visitor choice'); ?></h4>
+      <p class="kos-hint"><?php echo t('How long the choice is kept before the banner is shown again.'); ?></p>
+      <form method="post" action="<?php echo $view->action('save_preferences'); ?>">
+        <div class="kos-field">
+          <label for="consent_cookie_lifetime_days"><?php echo t('Retention (days)'); ?></label>
+          <input
+            type="number"
+            min="<?php echo isset($_consentCookieSettings['min_days']) ? (int) $_consentCookieSettings['min_days'] : 1; ?>"
+            max="<?php echo isset($_consentCookieSettings['max_days']) ? (int) $_consentCookieSettings['max_days'] : 400; ?>"
+            step="1"
+            class="form-control"
+            id="consent_cookie_lifetime_days"
+            name="consent_cookie_lifetime_days"
+            value="<?php echo isset($_consentCookieSettings['consent_cookie_lifetime_days']) ? (int) $_consentCookieSettings['consent_cookie_lifetime_days'] : 30; ?>"
+            required
+          >
+          <p class="kos-hint kos-hint--tight"><?php echo t('Allowed: %s to %s days.', isset($_consentCookieSettings['min_days']) ? (int) $_consentCookieSettings['min_days'] : 1, isset($_consentCookieSettings['max_days']) ? (int) $_consentCookieSettings['max_days'] : 400); ?></p>
+        </div>
+        <details class="kos-more">
+          <summary class="kos-more__summary"><?php echo t('Technical details'); ?></summary>
+          <div class="kos-more__body">
+            <?php echo t('Cookies set by this package: %s, %s and %s (Path=/, SameSite=Lax, Secure on HTTPS). Cookies created by tracking scripts follow those scripts own settings.', 'kos_cookie_consent_id', 'consent', 'consent_version'); ?>
+          </div>
+        </details>
+        <input type="hidden" name="token" value="<?php echo $_tokenSettings; ?>">
+        <button type="submit" class="btn btn-primary"><?php echo t('Save'); ?></button>
+      </form>
+    </div>
+  </div>
+  </div>
   <?php if ($pages > 1) { ?>
     <div class="ccm-search-results-pagination">
       <div class="ccm-pagination-wrapper">
@@ -506,7 +501,7 @@
           success: function() {
             var index = 1;
             tbody.querySelectorAll('tr[data-sort-id]').forEach(function(row) {
-              var sortCell = row.children[3];
+              var sortCell = row.querySelector('.kos-sort');
               if (sortCell) {
                 sortCell.textContent = index;
               }
