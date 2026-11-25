@@ -54,24 +54,70 @@
         <hr>
         <fieldset>
           <legend><?php echo t('Cookies') ?></legend>
+          <style>
+            .kos-lang-site{border:1px solid #dcdcdc;border-radius:4px;margin-bottom:20px;background:#fff}
+            .kos-lang-help{padding:10px 15px;background:#f6f8fa;border-bottom:1px solid #dcdcdc;font-size:13px}
+            .kos-lang-tabs{display:flex;flex-wrap:wrap;gap:0;margin:0;padding:0;list-style:none;border-bottom:1px solid #dcdcdc;background:#fafafa}
+            .kos-lang-tab{appearance:none;border:0;border-right:1px solid #dcdcdc;background:transparent;padding:10px 16px;cursor:pointer;font-size:14px;color:#333}
+            .kos-lang-tab:hover{background:#f0f0f0}
+            .kos-lang-tab.is-active{background:#fff;font-weight:600;box-shadow:inset 0 -3px 0 #2d7ff9}
+            .kos-lang-status{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600}
+            .kos-lang-status.is-done{background:#d9f2e1;color:#1b6b34}
+            .kos-lang-status.is-missing{background:#fde1e1;color:#a32121}
+            .kos-lang-pane{display:none;padding:15px}
+            .kos-lang-pane.is-active{display:block}
+            .kos-lang-pane-title{margin:0 0 12px;font-size:15px;font-weight:600}
+            .kos-lang-error{display:none;margin:0 0 12px;padding:8px 12px;border-radius:4px;background:#fde1e1;color:#a32121;font-size:13px}
+          </style>
           <?php
             $_options = $controller->kosdesign->getSiteLanguage();
+            $_bySite = [];
             foreach ($_options as $_val) {
-              $_siteid = $_val['site_id'];
-              $_code = $_val['language'];
-              $_codetext = '(' . $_val['text'] . ')';
-              $_name = 'label[' . $_siteid . '][' . $_code .']';
-              $_content = 'content[' . $_siteid . '][' . $_code .']';
+              $_bySite[$_val['site_id']][] = $_val;
+            }
+            foreach ($_bySite as $_siteid => $_langs) {
+              $_multi = count($_langs) > 1;
           ?>
-          <div class="form-language d-none" data-site="<?php echo $_siteid; ?>">
-            <div class="form-group">
-              <?php echo $form->label($_name, t('Name') . ' ' . $_codetext) ?>
-              <?php echo $form->text($_name, isset($_post['label'][$_siteid][$_code]) ? $_post['label'][$_siteid][$_code] : null) ?>
+          <div class="kos-lang-site d-none" data-site="<?php echo (int) $_siteid; ?>" style="display:none">
+            <div class="kos-lang-help">
+              <?php if ($_multi) { ?>
+                <?php echo t('This site has %d languages. Fill in the Name for every language tab. Visitors see the text that matches the language of the page they are viewing.', count($_langs)); ?>
+              <?php } else { ?>
+                <?php echo t('Enter the name and description shown to visitors.'); ?>
+              <?php } ?>
             </div>
-            <div class="form-group">
-              <?php echo $form->label($_content, t('Description') . ' ' . $_codetext) ?>
-              <?php echo $editor->outputStandardEditor($_content, isset($_post['content'][$_siteid][$_code]) ? $_post['content'][$_siteid][$_code] : null); ?>
-            </div>
+            <?php if ($_multi) { ?>
+              <ul class="kos-lang-tabs" role="tablist">
+                <?php foreach ($_langs as $_i => $_val) { ?>
+                  <li>
+                    <button type="button" class="kos-lang-tab<?php echo $_i === 0 ? ' is-active' : ''; ?>" role="tab" data-lang-target="<?php echo h($_siteid . '-' . $_val['language']); ?>">
+                      <?php echo h($_val['text']); ?> <small class="text-muted">(<?php echo h($_val['language']); ?>)</small>
+                      <span class="kos-lang-status is-missing"><?php echo t('Required'); ?></span>
+                    </button>
+                  </li>
+                <?php } ?>
+              </ul>
+            <?php } ?>
+            <?php foreach ($_langs as $_i => $_val) {
+              $_code = $_val['language'];
+              $_name = 'label[' . $_siteid . '][' . $_code . ']';
+              $_content = 'content[' . $_siteid . '][' . $_code . ']';
+            ?>
+              <div class="kos-lang-pane<?php echo $_i === 0 ? ' is-active' : ''; ?>" data-lang-pane="<?php echo h($_siteid . '-' . $_code); ?>">
+                <?php if ($_multi) { ?>
+                  <p class="kos-lang-pane-title"><?php echo h($_val['text']); ?> (<?php echo h($_code); ?>)</p>
+                <?php } ?>
+                <div class="kos-lang-error"><?php echo t('Please enter a name for this language.'); ?></div>
+                <div class="form-group">
+                  <?php echo $form->label($_name, t('Name') . ($_multi ? ' (' . h($_val['text']) . ')' : '')) ?>
+                  <?php echo $form->text($_name, isset($_post['label'][$_siteid][$_code]) ? $_post['label'][$_siteid][$_code] : null, ['class' => 'kos-lang-name']) ?>
+                </div>
+                <div class="form-group">
+                  <?php echo $form->label($_content, t('Description') . ($_multi ? ' (' . h($_val['text']) . ')' : '')) ?>
+                  <?php echo $editor->outputStandardEditor($_content, isset($_post['content'][$_siteid][$_code]) ? $_post['content'][$_siteid][$_code] : null); ?>
+                </div>
+              </div>
+            <?php } ?>
           </div>
           <?php } ?>
           <div class="form-group">
@@ -170,16 +216,74 @@
     </div>
     <script>
       $(function() {
-        var id = $('#site_id').val();
-        if (id) {
-          $('.form-language[data-site="' + id + '"]').removeClass('d-none');
+        var $form = $('#site_id').closest('form');
+
+        function sitePanel(siteId) {
+          return $('.kos-lang-site[data-site="' + siteId + '"]');
         }
 
-        $('#site_id').on('change', function() {
-          var siteId = $(this).val();
-          $('.form-language').addClass('d-none');
-          if (siteId) {
-            $('.form-language[data-site="' + siteId + '"]').removeClass('d-none');
+        function refreshStatus($site) {
+          $site.find('.kos-lang-pane').each(function() {
+            var $pane = $(this);
+            var key = $pane.data('lang-pane');
+            var done = $.trim($pane.find('.kos-lang-name').val()) !== '';
+            var $badge = $site.find('.kos-lang-tab[data-lang-target="' + key + '"] .kos-lang-status');
+            $badge.toggleClass('is-done', done).toggleClass('is-missing', !done).text(done ? '\u2713' : <?php echo json_encode(t('Required')); ?>);
+            if (done) {
+              $pane.find('.kos-lang-error').hide();
+            }
+          });
+        }
+
+        function activate($site, key) {
+          $site.find('.kos-lang-tab').removeClass('is-active').filter('[data-lang-target="' + key + '"]').addClass('is-active');
+          $site.find('.kos-lang-pane').removeClass('is-active').filter('[data-lang-pane="' + key + '"]').addClass('is-active');
+        }
+
+        function showSite(siteId) {
+          $('.kos-lang-site').removeClass('d-none').hide();
+          if (!siteId) {
+            return;
+          }
+          var $site = sitePanel(siteId).show();
+          refreshStatus($site);
+          var $panes = $site.find('.kos-lang-pane');
+          var anyFilled = $panes.find('.kos-lang-name').filter(function() { return $.trim($(this).val()) !== ''; }).length > 0;
+          if (anyFilled) {
+            var $firstMissing = $panes.filter(function() { return $.trim($(this).find('.kos-lang-name').val()) === ''; }).first();
+            if ($firstMissing.length) {
+              activate($site, $firstMissing.data('lang-pane'));
+            }
+          }
+        }
+
+        showSite($('#site_id').val());
+        $('#site_id').on('change', function() { showSite($(this).val()); });
+
+        $form.on('click', '.kos-lang-tab', function() {
+          activate($(this).closest('.kos-lang-site'), $(this).data('lang-target'));
+        });
+
+        $form.on('input change', '.kos-lang-name', function() {
+          refreshStatus($(this).closest('.kos-lang-site'));
+        });
+
+        // Stop the submit and jump to the first language tab that still needs a name.
+        $form.on('submit', function(e) {
+          var siteId = $('#site_id').val();
+          if (!siteId) {
+            return;
+          }
+          var $site = sitePanel(siteId);
+          var $missing = $site.find('.kos-lang-pane').filter(function() {
+            return $.trim($(this).find('.kos-lang-name').val()) === '';
+          });
+          if ($missing.length) {
+            e.preventDefault();
+            refreshStatus($site);
+            activate($site, $missing.first().data('lang-pane'));
+            $missing.first().find('.kos-lang-error').show();
+            $missing.first().find('.kos-lang-name').trigger('focus');
           }
         });
       });
