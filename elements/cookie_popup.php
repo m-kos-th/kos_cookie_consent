@@ -18,6 +18,11 @@ if ($siteId === null || empty($cookies)) {
     return;
 }
 
+// Never render the banner while an editor is working on the page (edit mode).
+if ($isEditMode) {
+    return;
+}
+
 $currentSection = Section::getCurrentSection();
 $language = $currentSection ? strtolower((string) $currentSection->getLanguage()) : 'en';
 $isThai = strpos($language, 'th') === 0;

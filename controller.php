@@ -363,9 +363,16 @@ class Controller extends Package
             return false;
         }
 
-        $path = (string) $page->getCollectionPath();
-        if (strpos($path, '/dashboard') === 0 || strpos($path, '/!') === 0) {
+        // Never show the banner while editing a page or on system pages (login, dashboard, register...).
+        if ($page->isEditMode() || $page->isSystemPage()) {
             return false;
+        }
+
+        $path = (string) $page->getCollectionPath();
+        foreach (['/dashboard', '/!', '/login', '/register', '/ccm'] as $prefix) {
+            if ($path === $prefix || strpos($path, $prefix . '/') === 0) {
+                return false;
+            }
         }
 
         try {
