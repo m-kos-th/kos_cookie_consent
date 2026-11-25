@@ -523,9 +523,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     window.gtag("consent", "update", signals);
     window.dataLayer.push({
-      event: "kos_consent_update",
-      kos_consent_saved: !!mode.saved,
-      kos_consent_state: signals,
+      event: "cookie_consent_update",
+      cookie_consent_saved: !!mode.saved,
+      cookie_consent_state: signals,
     });
 
     if (mode.saved) {

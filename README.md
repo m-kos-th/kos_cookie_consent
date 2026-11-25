@@ -230,3 +230,5 @@ Requires concrete5 8.5.7+ and PHP 7.4+.
 2. Edit each cookie category and tick the signals it controls (for Google: `analytics_storage` for analytics, `ad_storage` + `ad_user_data` + `ad_personalization` for ads).
 3. Put the GTM/gtag loader in a category with *Load the tracking codes on every page* checked, so tags can read the default/update signals.
 4. Verify in the browser: `dataLayer` shows `consent default` (denied) first, then `consent update` after the visitor chooses.
+5. For tags without built-in consent support (e.g. Meta Pixel, Microsoft Ads, LinkedIn) in Google Tag Manager: create a trigger of type **Custom Event** named `cookie_consent_update` (all lower case, must match exactly) and use it as the tag's trigger. Also set the tag's *Additional Consent* to the signals it needs (`ad_storage`, `ad_user_data`, `ad_personalization`). Google tags (GA4, Google Ads) read the signals themselves and do not need this trigger.
+6. Check in GTM Preview / Tag Assistant: the GA4 page view shows `gcs=G100` before consent and `G111` after *Accept All*.
