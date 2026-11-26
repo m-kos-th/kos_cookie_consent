@@ -831,7 +831,7 @@ class CookieConsentService
     }
 
     /**
-     * Default categories modelled after the common Necessary / Statistics / Marketing split.
+     * Default categories modelled after the common Necessary / Statistics / Preferences / Marketing split.
      * Each entry maps to Google Consent Mode V2 signals; text is provided in Thai and English.
      */
     public function getDefaultCategoryDefinitions()
@@ -859,6 +859,18 @@ class CookieConsentService
                     'th' => 'คุกกี้เพื่อการวิเคราะห์สถิติช่วยให้เราเข้าใจวิธีที่ผู้เยี่ยมชมใช้งานเว็บไซต์ โดยเก็บและรายงานข้อมูลแบบไม่ระบุตัวตน เพื่อนำไปปรับปรุงเว็บไซต์',
                     'ja' => '統計Cookieは、訪問者がウェブサイトをどのように利用しているかを匿名で収集・報告することで、サイトの改善に役立てるために使用されます。',
                     'zh-hans' => '统计 Cookie 通过匿名收集和报告信息，帮助我们了解访问者如何使用网站，以便改进网站。',
+                ],
+            ],
+            [
+                'name' => 'Preferences',
+                'always' => 0,
+                'signals' => 'personalization_storage',
+                'label' => ['en' => 'Preferences', 'th' => 'คุกกี้เพื่อการปรับแต่งประสบการณ์', 'ja' => '設定Cookie', 'zh-hans' => '偏好 Cookie'],
+                'content' => [
+                    'en' => 'Preference cookies let the website remember your choices and personalise your experience, such as recommended content or display settings.',
+                    'th' => 'คุกกี้เพื่อการปรับแต่งประสบการณ์ช่วยให้เว็บไซต์จดจำตัวเลือกของคุณและปรับเนื้อหาให้เหมาะกับคุณ เช่น เนื้อหาแนะนำหรือการตั้งค่าการแสดงผล',
+                    'ja' => '設定Cookieは、お客様の選択内容を記憶し、おすすめコンテンツや表示設定など、利用体験をパーソナライズするために使用されます。',
+                    'zh-hans' => '偏好 Cookie 用于记住您的选择并个性化您的体验，例如推荐内容或显示设置。',
                 ],
             ],
             [

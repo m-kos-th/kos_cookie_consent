@@ -60,7 +60,7 @@
             foreach ($_options as $_val) {
               $_bySite[$_val['site_id']][] = $_val;
             }
-            // Built-in default text, grouped by category type (Necessary, Statistics, Marketing).
+            // Built-in default text, grouped by category type (Necessary, Statistics, Preferences, Marketing).
             $_defTypes = [];
             foreach ((array) $controller->kosdesign->getDefaultCategoryDefinitions() as $_def) {
               $_defTypes[$_def['name']] = ['label' => $_def['label'], 'content' => $_def['content']];
