@@ -90,6 +90,19 @@ Each optional cookie category can define first-party cookies that should be remo
 - Use `*` only at the end for prefix matches, for example `_ga_*`.
 - Cookie path defaults to `/`.
 - Domain override is optional and should be a hostname only.
+- The cookie names field has an **Examples by tool** picker (Meta Pixel, TikTok Pixel, LINE Tag, Google Ads, Google Analytics, Hotjar, Microsoft Clarity). Pick a tool, then use **Add to Cookie names** or **Copy**.
+
+Usual cookie names per tool (tools can change them, so check the cookies your site really sets in browser DevTools > Application > Cookies):
+
+| Tool | Category | Cookie names |
+|---|---|---|
+| Meta Pixel | Marketing | `_fbp`, `_fbc` |
+| TikTok Pixel | Marketing | `_ttp`, `_tt_*` |
+| LINE Tag | Marketing | `__lt__*` |
+| Google Ads | Marketing | `_gcl_*`, `_gac_*` |
+| Google Analytics | Statistics | `_ga`, `_ga_*`, `_gid` |
+| Hotjar | Statistics | `_hj*` |
+| Microsoft Clarity | Statistics | `_clck`, `_clsk` |
 
 Important limitations:
 

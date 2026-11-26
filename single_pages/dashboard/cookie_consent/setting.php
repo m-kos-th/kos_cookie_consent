@@ -184,13 +184,7 @@
           ?>
           <div class="kos-section">
             <h3 class="kos-section__title"><?php echo t('Google Consent Mode V2') ?></h3>
-            <p class="kos-hint"><?php echo t('What Google may do once a visitor accepts this category. Used only when Consent Mode is turned on.'); ?></p>
-            <p class="kos-hint">
-              <?php echo t('Not sure which signals belong to this category? Read:'); ?>
-              <a class="kos-hint__link" href="https://support.google.com/analytics/answer/12334711" target="_blank" rel="noopener noreferrer"><?php echo t('Consent types explained'); ?></a>
-              &middot;
-              <a class="kos-hint__link" href="https://developers.google.com/tag-platform/security/guides/consent" target="_blank" rel="noopener noreferrer"><?php echo t('Set up consent mode on websites'); ?></a>
-            </p>
+            <p class="kos-hint"><?php echo t('What Google may do once a visitor accepts this category.'); ?></p>
             <?php foreach ((isset($_consentModeSignals) ? $_consentModeSignals : []) as $_signal) { ?>
               <div class="form-check kos-signal">
                 <input type="checkbox" class="form-check-input" id="consent_mode_types_<?php echo h($_signal); ?>" name="consent_mode_types[]" value="<?php echo h($_signal); ?>"<?php echo in_array($_signal, $_selectedModeTypes, true) ? ' checked' : ''; ?>>
@@ -233,8 +227,119 @@
                 <div class="form-group">
                   <?php echo $form->label('managed_cookie_names', t('Cookie names')) ?>
                   <?php echo $form->textarea('managed_cookie_names', isset($_post['managed_cookie_names']) ? $_post['managed_cookie_names'] : '', ['style' => 'height: 110px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false', 'placeholder' => "_ga\n_gid\n_ga_*"]) ?>
-                  <p class="kos-hint"><?php echo t('One name per line. Use * at the end for a prefix, e.g. %s.', '_ga_*'); ?></p>
+                  <p class="kos-hint"><?php echo t('One name per line. End a name with * to match all names that start with it.'); ?></p>
                 </div>
+                <?php
+                  $_cleanupPresets = [
+                    ['key' => 'meta', 'label' => 'Meta Pixel', 'category' => t('Marketing'), 'names' => ['_fbp', '_fbc']],
+                    ['key' => 'tiktok', 'label' => 'TikTok Pixel', 'category' => t('Marketing'), 'names' => ['_ttp', '_tt_*']],
+                    ['key' => 'line', 'label' => 'LINE Tag', 'category' => t('Marketing'), 'names' => ['__lt__*']],
+                    ['key' => 'gads', 'label' => 'Google Ads', 'category' => t('Marketing'), 'names' => ['_gcl_*', '_gac_*']],
+                    ['key' => 'ga', 'label' => 'Google Analytics', 'category' => t('Statistics'), 'names' => ['_ga', '_ga_*', '_gid']],
+                    ['key' => 'hotjar', 'label' => 'Hotjar', 'category' => t('Statistics'), 'names' => ['_hj*']],
+                    ['key' => 'clarity', 'label' => 'Microsoft Clarity', 'category' => t('Statistics'), 'names' => ['_clck', '_clsk']],
+                  ];
+                ?>
+                <div class="kos-preset" id="kos-cleanup-presets">
+                  <p class="kos-hint kos-hint--tight"><strong><?php echo t('Not sure what to enter? Pick a tool'); ?></strong></p>
+                  <ul class="nav nav-tabs" role="tablist">
+                    <?php foreach ($_cleanupPresets as $_preset) { ?>
+                      <li class="nav-item" role="presentation"><a href="#" class="nav-link" role="tab" aria-selected="false" data-preset="<?php echo h($_preset['key']); ?>"><?php echo h($_preset['label']); ?></a></li>
+                    <?php } ?>
+                  </ul>
+                  <?php foreach ($_cleanupPresets as $_preset) { ?>
+                    <div class="kos-preset__panel" role="tabpanel" data-preset-panel="<?php echo h($_preset['key']); ?>" hidden>
+                      <p class="kos-hint kos-hint--tight"><?php echo t('Usually used with the %s category.', h($_preset['category'])); ?></p>
+                      <div class="kos-preset__code">
+                        <button type="button" class="btn btn-sm btn-secondary btn-default" data-preset-copy><?php echo t('Copy'); ?></button>
+                        <pre><?php echo h(implode("\n", $_preset['names'])); ?></pre>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-primary" data-preset-add><?php echo t('Add to Cookie names'); ?></button>
+                      <span class="kos-preset__msg text-success" aria-live="polite"></span>
+                    </div>
+                  <?php } ?>
+                </div>
+                <script>
+                  (function() {
+                    var root = document.getElementById('kos-cleanup-presets');
+                    var field = document.getElementById('managed_cookie_names');
+                    if (!root || !field) {
+                      return;
+                    }
+                    var msgAdded = <?php echo json_encode(t('Added')); ?>;
+                    var msgExists = <?php echo json_encode(t('Already in the list')); ?>;
+                    var msgCopied = <?php echo json_encode(t('Copied')); ?>;
+
+                    function names(panel) {
+                      return panel.querySelector('.kos-preset__code pre').textContent.split('\n').filter(function(n) { return n.trim() !== ''; });
+                    }
+
+                    function setActive(link, on) {
+                      link.setAttribute('aria-selected', on ? 'true' : 'false');
+                      link.classList.toggle('active', on);
+                      link.parentNode.classList.toggle('active', on);
+                    }
+
+                    root.addEventListener('click', function(e) {
+                      var tab = e.target.closest('[data-preset]');
+                      if (tab) {
+                        e.preventDefault();
+                        var wasOpen = tab.getAttribute('aria-selected') === 'true';
+                        root.querySelectorAll('[data-preset]').forEach(function(l) { setActive(l, false); });
+                        root.querySelectorAll('.kos-preset__panel').forEach(function(p) {
+                          p.hidden = true;
+                          p.querySelector('.kos-preset__msg').textContent = '';
+                        });
+                        if (!wasOpen) {
+                          setActive(tab, true);
+                          root.querySelector('[data-preset-panel="' + tab.getAttribute('data-preset') + '"]').hidden = false;
+                        }
+                        return;
+                      }
+
+                      var panel = e.target.closest('.kos-preset__panel');
+                      if (!panel) {
+                        return;
+                      }
+
+                      if (e.target.closest('[data-preset-add]')) {
+                        var current = field.value.split(/\r?\n/).map(function(n) { return n.trim(); }).filter(Boolean);
+                        var added = 0;
+                        names(panel).forEach(function(n) {
+                          if (current.indexOf(n) === -1) {
+                            current.push(n);
+                            added++;
+                          }
+                        });
+                        field.value = current.join('\n');
+                        panel.querySelector('.kos-preset__msg').textContent = added > 0 ? msgAdded + ' (' + added + ')' : msgExists;
+                        return;
+                      }
+
+                      var copyBtn = e.target.closest('[data-preset-copy]');
+                      if (copyBtn) {
+                        var text = names(panel).join('\n');
+                        var label = copyBtn.getAttribute('data-label') || copyBtn.textContent;
+                        copyBtn.setAttribute('data-label', label);
+                        var done = function() {
+                          copyBtn.textContent = msgCopied;
+                          setTimeout(function() { copyBtn.textContent = label; }, 1500);
+                        };
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                          navigator.clipboard.writeText(text).then(done);
+                        } else {
+                          var tmp = document.createElement('textarea');
+                          tmp.value = text;
+                          document.body.appendChild(tmp);
+                          tmp.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(tmp);
+                          done();
+                        }
+                      }
+                    });
+                  })();
+                </script>
                 <div class="row">
                   <div class="col-md-6">
                     <div class="form-group">
@@ -249,7 +354,7 @@
                     </div>
                   </div>
                 </div>
-                <p class="kos-hint"><?php echo t('Your own site cookies only. Do not add %s, %s or %s. Cookies on other domains and HttpOnly cookies cannot be removed.', 'kos_cookie_consent_id', 'consent', 'consent_version'); ?></p>
+                <p class="kos-hint"><?php echo t('Only cookies set by your own site can be removed.'); ?></p>
               </div>
             </details>
           </div>
@@ -540,14 +645,9 @@
           <label class="form-check-label" for="consent_mode_enabled"><?php echo t('Turn on Consent Mode V2'); ?></label>
         </div>
         <div class="kos-field">
-          <label for="consent_mode_wait_for_update"><?php echo t('Wait for visitor choice (ms)'); ?></label>
-          <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
-          <p class="kos-hint kos-hint--tight"><?php echo t('Recommended: 500.'); ?></p>
-        </div>
-        <div class="kos-field">
           <label for="consent_mode_google_tag_ids"><?php echo t('Google tag ID'); ?></label>
           <input type="text" class="form-control" id="consent_mode_google_tag_ids" name="consent_mode_google_tag_ids" value="<?php echo h(isset($_consentModeSettings['google_tag_ids']) ? $_consentModeSettings['google_tag_ids'] : ''); ?>" placeholder="G-XXXXXXXXXX, GTM-XXXXXXX" autocomplete="off">
-          <p class="kos-hint kos-hint--tight"><?php echo t('The Google tag loads once on every page and follows the visitor choice. Enter the full ID with its prefix: Google Analytics (G-ND47ZHMZFR), Google Ads (AW-XXXXXXXXXX) or Tag Manager (GTM-XXXXXXX); separate several with commas. For Tag Manager enter only the GTM ID and set up Google Analytics inside it. Works only while Consent Mode V2 is on. Leave empty if you add the tag yourself.'); ?></p>
+          <p class="kos-hint kos-hint--tight"><?php echo t('For example G-XXXXXXXXXX or GTM-XXXXXXX. Separate several with commas. Leave empty if you add the tag yourself.'); ?></p>
           <?php if (!empty($_googleLoaderCategories) && !empty($_consentModeSettings['google_tag_ids'])) { ?>
             <div class="alert alert-warning kos-hint--tight">
               <?php echo t('These categories already contain a Google tag script: %s. Remove it from them, or the tag will load twice.', h(implode(', ', $_googleLoaderCategories))); ?>
@@ -557,13 +657,17 @@
         <details class="kos-more">
           <summary class="kos-more__summary"><?php echo t('Advanced options'); ?></summary>
           <div class="kos-more__body">
+            <div class="kos-field">
+              <label for="consent_mode_wait_for_update"><?php echo t('Wait for visitor choice (ms)'); ?></label>
+              <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
+            </div>
             <div class="form-check">
               <input type="checkbox" class="form-check-input" id="consent_mode_ads_data_redaction" name="consent_mode_ads_data_redaction" value="1"<?php echo !empty($_consentModeSettings['ads_data_redaction']) ? ' checked' : ''; ?>>
-              <label class="form-check-label" for="consent_mode_ads_data_redaction"><?php echo t('Hide ad click IDs while ad cookies are denied'); ?> <code>ads_data_redaction</code></label>
+              <label class="form-check-label" for="consent_mode_ads_data_redaction"><?php echo t('Hide ad click IDs while ad cookies are denied'); ?></label>
             </div>
             <div class="form-check">
               <input type="checkbox" class="form-check-input" id="consent_mode_url_passthrough" name="consent_mode_url_passthrough" value="1"<?php echo !empty($_consentModeSettings['url_passthrough']) ? ' checked' : ''; ?>>
-              <label class="form-check-label" for="consent_mode_url_passthrough"><?php echo t('Keep ad click info in page URLs'); ?> <code>url_passthrough</code></label>
+              <label class="form-check-label" for="consent_mode_url_passthrough"><?php echo t('Keep ad click info in page URLs'); ?></label>
             </div>
           </div>
         </details>
@@ -588,14 +692,7 @@
             value="<?php echo isset($_consentCookieSettings['consent_cookie_lifetime_days']) ? (int) $_consentCookieSettings['consent_cookie_lifetime_days'] : 30; ?>"
             required
           >
-          <p class="kos-hint kos-hint--tight"><?php echo t('Allowed: %s to %s days.', isset($_consentCookieSettings['min_days']) ? (int) $_consentCookieSettings['min_days'] : 1, isset($_consentCookieSettings['max_days']) ? (int) $_consentCookieSettings['max_days'] : 400); ?></p>
         </div>
-        <details class="kos-more">
-          <summary class="kos-more__summary"><?php echo t('Technical details'); ?></summary>
-          <div class="kos-more__body">
-            <?php echo t('Cookies set by this package: %s, %s and %s (Path=/, SameSite=Lax, Secure on HTTPS). Cookies created by tracking scripts follow those scripts own settings.', 'kos_cookie_consent_id', 'consent', 'consent_version'); ?>
-          </div>
-        </details>
         <input type="hidden" name="token" value="<?php echo $_tokenSettings; ?>">
         <button type="submit" class="btn btn-primary"><?php echo t('Save'); ?></button>
       </form>

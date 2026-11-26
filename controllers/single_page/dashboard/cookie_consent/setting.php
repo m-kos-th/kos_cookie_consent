@@ -95,7 +95,7 @@ class Setting extends CookieConsent
         }
 
         if (!preg_match('/^\d+$/', $waitForUpdate) || (int) $waitForUpdate > CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE) {
-            $this->flash('error', t('Wait for update must be a whole number of milliseconds between 0 and %s.', CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE));
+            $this->flash('error', t('Wait time must be a whole number between 0 and %s.', CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE));
 
             return $this->redirect('/dashboard/cookie_consent/setting');
         }
@@ -405,24 +405,24 @@ class Setting extends CookieConsent
 
             $hasManagedCookies = true;
             if (substr_count($cookiePattern, '*') > 1 || (strpos($cookiePattern, '*') !== false && substr($cookiePattern, -1) !== '*')) {
-                $this->error->add(t('Managed cookie rule line %s is invalid. Use an exact cookie name or a prefix ending with *.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names is not valid. Use a cookie name, or a name ending with *.', $index + 1));
                 continue;
             }
 
             $cookieName = substr($cookiePattern, -1) === '*' ? substr($cookiePattern, 0, -1) : $cookiePattern;
             $cookieName = trim((string) $cookieName);
             if ($cookieName === '') {
-                $this->error->add(t('Managed cookie rule line %s is invalid.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names is not valid.', $index + 1));
                 continue;
             }
 
             if (!preg_match("/^[!#$%&'\\+\\-.\\^_`|~0-9A-Za-z]+$/", $cookieName)) {
-                $this->error->add(t('Managed cookie rule line %s contains unsupported characters for a cookie name.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names has characters a cookie name cannot contain.', $index + 1));
                 continue;
             }
 
             if (in_array($cookieName, $reservedCookieNames, true)) {
-                $this->error->add(t('Managed cookie rule line %s cannot target the consent cookies required by this package.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names is a cookie this package needs. Remove it.', $index + 1));
             }
         }
 
@@ -432,12 +432,12 @@ class Setting extends CookieConsent
 
         $rawDomain = trim((string) $managedCookieDomainRaw);
         if ($rawDomain !== '' && $this->kosdesign->sanitizeManagedCookieDomain($rawDomain) === '') {
-            $this->error->add(t('Managed cookie domain must be a hostname only, without protocol or path.'));
+            $this->error->add(t('Cookie domain must be a domain name only, for example example.com.'));
         }
 
         $rawPath = trim((string) $managedCookiePathRaw);
         if ($rawPath !== '' && $this->kosdesign->sanitizeManagedCookiePath($rawPath) === CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT && $rawPath !== CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT) {
-            $this->error->add(t('Managed cookie path must start with /.'));
+            $this->error->add(t('Cookie path must start with /.'));
         }
     }
 

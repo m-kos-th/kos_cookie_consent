@@ -287,3 +287,32 @@
 .kos-hint[hidden] {
   display: none;
 }
+
+.kos-preset {
+  margin: 0 0 14px;
+}
+.kos-preset__panel {
+  padding-top: 12px;
+}
+.kos-preset__panel[hidden] {
+  display: none;
+}
+.kos-preset__code {
+  position: relative;
+  max-width: 320px;
+  margin: 0 0 10px;
+}
+.kos-preset__code pre {
+  margin: 0;
+  padding: 10px 76px 10px 12px;
+  font-size: 13px;
+}
+.kos-preset__code .btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.kos-preset__msg {
+  margin-left: 8px;
+  font-size: 13px;
+}

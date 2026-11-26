@@ -40,7 +40,7 @@ $_copyFields = ['banner_title', 'banner_summary', 'modal_title', 'modal_intro_on
   <form method="post" action="<?php echo $view->action('save'); ?>" id="kos-popup-content-form">
     <input type="hidden" name="token_popup_content" value="<?php echo h($_tokenPopupContent); ?>">
 
-    <p class="kos-hint"><?php echo t('Text shown in the cookie banner and the preference panel. An empty field uses the default text shown under it (except paragraph 2, which is hidden when empty).'); ?></p>
+    <p class="kos-hint"><?php echo t('Text shown in the cookie banner. Leave a field empty to use the default text.'); ?></p>
 
     <?php if (!empty($_bySite)) { ?>
       <?php foreach ($_bySite as $_siteid => $_site) { ?>
