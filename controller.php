@@ -401,6 +401,12 @@ class Controller extends Package
         if ($consentModeScript !== '') {
             // Must be printed before any gtag/GTM loader so the default state is registered first.
             $view->addHeaderItem($consentModeScript);
+
+            $googleTagScript = $helper->renderGoogleTagScript();
+            if ($googleTagScript !== '') {
+                // The global Google tag comes right after the default state, never before it.
+                $view->addHeaderItem($googleTagScript);
+            }
         }
 
         $view->addHeaderItem('<link rel="stylesheet" href="' . h($basePath) . '/assets/css/cookie-popup.css?v=' . $version . '">');

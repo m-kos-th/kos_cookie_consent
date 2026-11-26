@@ -183,6 +183,50 @@ class CookieConsentHelper
             . '})(window,document);</script>';
     }
 
+    /**
+     * Global Google tag (GTM and/or gtag.js) built from the Google tag IDs saved in the settings.
+     * Printed once per page right after the Consent Mode default script, so the tag always reads
+     * the consent state first. Only used while Consent Mode V2 is on: the tag then sends nothing
+     * the visitor has not allowed.
+     */
+    public function renderGoogleTagScript()
+    {
+        if (!$this->cookieConsent->isConsentModeEnabled()) {
+            return '';
+        }
+
+        $settings = $this->cookieConsent->getConsentModeSettings();
+        $parsed = $this->cookieConsent->parseGoogleTagIds(isset($settings['google_tag_ids']) ? $settings['google_tag_ids'] : '');
+        if (empty($parsed['ids'])) {
+            return '';
+        }
+
+        $html = '';
+        $gtagIds = [];
+        foreach ($parsed['ids'] as $id) {
+            if (strpos($id, 'GTM-') === 0) {
+                $json = json_encode($id, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                $html .= '<script data-kos-google-tag="' . h($id) . '">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({"gtm.start":new Date().getTime(),event:"gtm.js"});'
+                    . 'var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=true;j.src="https://www.googletagmanager.com/gtm.js?id="+i;'
+                    . 'f.parentNode.insertBefore(j,f);})(window,document,"script","dataLayer",' . $json . ');</script>';
+            } else {
+                $gtagIds[] = $id;
+            }
+        }
+
+        if ($gtagIds) {
+            $config = '';
+            foreach ($gtagIds as $id) {
+                $config .= 'gtag("config",' . json_encode($id, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ');';
+            }
+            $html .= '<script async src="https://www.googletagmanager.com/gtag/js?id=' . h(rawurlencode($gtagIds[0])) . '" data-kos-google-tag="' . h(implode(',', $gtagIds)) . '"></script>'
+                . '<script data-kos-google-tag="config">window.dataLayer=window.dataLayer||[];window.gtag=window.gtag||function(){window.dataLayer.push(arguments);};'
+                . 'gtag("js",new Date());' . $config . '</script>';
+        }
+
+        return $html;
+    }
+
     public function getConsentCookieLifetimeDays()
     {
         return $this->cookieConsent->getConsentCookieLifetimeDays();

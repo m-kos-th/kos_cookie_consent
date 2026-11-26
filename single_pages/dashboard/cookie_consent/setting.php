@@ -220,11 +220,6 @@
                   <?php echo $form->label('code_footer', t('Footer Tracking Codes')) ?>
                   <?php echo $form->textarea('code_footer', isset($_post['code_footer']) ? $_post['code_footer'] : '', ['style' => 'height: 110px;', 'class' => 'form-control font-monospace', 'spellcheck' => 'false']) ?>
                 </div>
-                <div class="form-check">
-                  <?php echo $form->checkbox('code_always_load', '1', !empty($_post['code_always_load']) ? '1' : '0') ?>
-                  <label class="form-check-label" for="code_always_load"><?php echo t('Load these codes on every page, regardless of consent') ?></label>
-                </div>
-                <p class="kos-hint"><?php echo t('Only for a GTM/gtag loader that reads the Consent Mode signals.'); ?></p>
               </div>
             </details>
           </div>
@@ -548,6 +543,16 @@
           <label for="consent_mode_wait_for_update"><?php echo t('Wait for visitor choice (ms)'); ?></label>
           <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
           <p class="kos-hint kos-hint--tight"><?php echo t('Recommended: 500.'); ?></p>
+        </div>
+        <div class="kos-field">
+          <label for="consent_mode_google_tag_ids"><?php echo t('Google tag ID'); ?></label>
+          <input type="text" class="form-control" id="consent_mode_google_tag_ids" name="consent_mode_google_tag_ids" value="<?php echo h(isset($_consentModeSettings['google_tag_ids']) ? $_consentModeSettings['google_tag_ids'] : ''); ?>" placeholder="G-XXXXXXXXXX, GTM-XXXXXXX" autocomplete="off">
+          <p class="kos-hint kos-hint--tight"><?php echo t('The Google tag loads once on every page and follows the visitor choice. Enter the full ID with its prefix: Google Analytics (G-ND47ZHMZFR), Google Ads (AW-XXXXXXXXXX) or Tag Manager (GTM-XXXXXXX); separate several with commas. For Tag Manager enter only the GTM ID and set up Google Analytics inside it. Works only while Consent Mode V2 is on. Leave empty if you add the tag yourself.'); ?></p>
+          <?php if (!empty($_googleLoaderCategories) && !empty($_consentModeSettings['google_tag_ids'])) { ?>
+            <div class="alert alert-warning kos-hint--tight">
+              <?php echo t('These categories already contain a Google tag script: %s. Remove it from them, or the tag will load twice.', h(implode(', ', $_googleLoaderCategories))); ?>
+            </div>
+          <?php } ?>
         </div>
         <details class="kos-more">
           <summary class="kos-more__summary"><?php echo t('Advanced options'); ?></summary>

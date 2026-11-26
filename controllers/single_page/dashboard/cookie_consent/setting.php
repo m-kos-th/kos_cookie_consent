@@ -46,6 +46,7 @@ class Setting extends CookieConsent
         $this->set('_tokenSettings', $this->token->generate('cookie_consent_settings'));
         $this->set('_consentCookieSettings', $this->kosdesign->getConsentCookieSettings());
         $this->set('_consentModeSettings', $this->kosdesign->getConsentModeSettings());
+        $this->set('_googleLoaderCategories', $this->kosdesign->findCategoriesWithGoogleLoader($siteid));
         $this->set('_tokenConsentMode', $this->token->generate('cookie_consent_mode'));
         $this->set('_tokenDefaults', $this->token->generate('cookie_consent_defaults'));
     }
@@ -99,12 +100,20 @@ class Setting extends CookieConsent
             return $this->redirect('/dashboard/cookie_consent/setting');
         }
 
+        $googleTagIds = $this->kosdesign->parseGoogleTagIds((string) $this->post('consent_mode_google_tag_ids'));
+        if (!empty($googleTagIds['invalid'])) {
+            $this->flash('error', t('Google tag ID is not valid: %s. Use G-XXXXXXXXXX, AW-XXXXXXXXXX or GTM-XXXXXXX.', implode(', ', array_map('h', $googleTagIds['invalid']))));
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
         try {
             $this->kosdesign->saveConsentModeSettings([
                 'enabled' => (bool) $this->post('consent_mode_enabled'),
                 'wait_for_update' => (int) $waitForUpdate,
                 'ads_data_redaction' => (bool) $this->post('consent_mode_ads_data_redaction'),
                 'url_passthrough' => (bool) $this->post('consent_mode_url_passthrough'),
+                'google_tag_ids' => implode(',', $googleTagIds['ids']),
             ]);
             $this->flash('success', t('Consent Mode settings saved.'));
         } catch (\Throwable $e) {
@@ -239,7 +248,6 @@ class Setting extends CookieConsent
         $managedCookieDomainRaw = isset($post['managed_cookie_domain']) ? (string) $post['managed_cookie_domain'] : '';
         $managedCookiePathRaw = isset($post['managed_cookie_path']) ? (string) $post['managed_cookie_path'] : CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT;
         $consentModeTypes = $this->kosdesign->sanitizeConsentModeTypes(isset($post['consent_mode_types']) ? $post['consent_mode_types'] : []);
-        $codeAlwaysLoad = !empty($post['code_always_load']) ? 1 : 0;
 
         if (($id === null && !$this->token->validate('cookie_consent_add', $postedToken)) || ($id !== null && !$this->token->validate('cookie_consent_edit', $postedToken))) {
             $this->error->add($this->token->getErrorMessage());
@@ -321,13 +329,13 @@ class Setting extends CookieConsent
             }
 
             if ($id !== null) {
-                $saved = $this->kosdesign->DBUpdateCookie($id, $name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes, $codeAlwaysLoad);
+                $saved = $this->kosdesign->DBUpdateCookie($id, $name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes);
                 if (!$saved) {
                     throw new Exception('Can not update cookie. Please try again.');
                 }
                 $cookieId = $id;
             } else {
-                $cookieId = $this->kosdesign->DBInsertCookie($name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes, $codeAlwaysLoad);
+                $cookieId = $this->kosdesign->DBInsertCookie($name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes);
                 if ($cookieId === null) {
                     throw new Exception('Can not create cookie. Please try again.');
                 }

@@ -96,7 +96,7 @@ class CookieConsentApiController
                 'consent_id' => $payload['consent_id'],
                 'version' => $consentVersion,
                 'consent' => $consentIds,
-                'code' => $this->mergeAlwaysLoadCode($code, $siteId),
+                'code' => $code,
                 'consent_mode' => $this->buildConsentModePayload($siteId, $consentIds, !empty($log['saved'])),
                 'cookie_max_age' => $cookieMaxAge,
                 'managed_cookie_cleanup' => $managedCookieCleanup,
@@ -150,7 +150,7 @@ class CookieConsentApiController
             'version' => $consentVersion,
             'consent' => $consentIds,
             'token' => $this->app->make('token')->generate(self::TOKEN_ACTION),
-            'code' => $this->mergeAlwaysLoadCode($code, $siteId),
+            'code' => $code,
             'consent_mode' => $this->buildConsentModePayload($siteId, $consentIds, !empty($log['saved'])),
             'cookie_max_age' => $cookieMaxAge,
             'managed_cookie_cleanup' => $managedCookieCleanup,
@@ -170,21 +170,6 @@ class CookieConsentApiController
             'saved' => (bool) $saved,
             'state' => $this->cookieConsent->getConsentModeState($siteId, $saved ? $consentIds : []),
         ];
-    }
-
-    protected function mergeAlwaysLoadCode(array $code, $siteId)
-    {
-        if (!$this->cookieConsent->isConsentModeEnabled()) {
-            return $code;
-        }
-
-        $always = $this->cookieConsent->getAlwaysLoadCode($siteId);
-        foreach (['header', 'body', 'footer'] as $position) {
-            $current = isset($code[$position]) && is_array($code[$position]) ? $code[$position] : [];
-            $code[$position] = array_values(array_unique(array_merge($always[$position], $current)));
-        }
-
-        return $code;
     }
 
     protected function getRequestData()

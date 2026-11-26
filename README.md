@@ -228,8 +228,34 @@ Requires concrete5 8.5.7+ and PHP 7.4+.
 
 1. Upgrade the package, then open **Dashboard > Cookie Consent > Setting** and enable *Consent Mode V2*.
 2. Edit each cookie category and tick the signals it controls (for Google: `analytics_storage` for analytics, `ad_storage` + `ad_user_data` + `ad_personalization` for ads).
-3. Put the GTM/gtag loader in a category with *Load the tracking codes on every page* checked, so tags can read the default/update signals.
+3. Enter your Google tag ID in the Settings card (see *Google tag* below).
 4. Verify in the browser: `dataLayer` shows `consent default` (denied) first, then `consent update` after the visitor chooses.
+
+### Google tag (one tag for the whole site)
+
+Google Analytics and Google Ads share **one** Google tag. The categories do not load their own copy; they only decide which Consent Mode signals are granted (Necessary: `functionality_storage` + `security_storage`, Statistics: `analytics_storage`, Preferences: `personalization_storage`, Marketing: the three `ad_*` signals).
+
+1. Dashboard > Cookie Consent > Settings > *Google Consent Mode V2*, turn it on.
+2. Enter the **Google tag ID** (`G-XXXXXXXXXX` for Analytics, `AW-XXXXXXXXXX` for Ads, `GTM-XXXXXXX` for Tag Manager; several IDs separated by commas) and save.
+3. The package prints the loader on every page right after the consent default, so the tag always reads the visitor choice first. The field works only while Consent Mode V2 is on.
+
+Notes:
+- Use category *Tracking codes* only for tools that are not Google (Meta Pixel, Hotjar, ...). Those load after the visitor accepts the category.
+- If a category's code already contains a Google tag script while an ID is set, the Settings page shows a warning (the tag would load twice). Remove one of them.
+- The GTM `noscript` iframe is not printed (the banner needs JavaScript anyway).
+- Do **not** put tracking scripts in Concrete's own *Dashboard > System & Settings > SEO & Statistics > Tracking Codes*. They load for every visitor immediately and skip consent.
+
+#### Using Google Tag Manager
+
+Enter the container ID (`GTM-XXXXXXX`, copied from the GTM workspace) in the same **Google tag ID** field. There is no separate GTM field.
+
+1. Settings > *Google Consent Mode V2*: turn it on, enter `GTM-XXXXXXX`, save.
+2. In GTM, create the Google tag (GA4) with your Measurement ID `G-XXXXXXXXXX` and a *Initialization - All Pages* trigger. Do not enter the same `G-` ID in the package field, or visits are counted twice.
+3. Open **Admin > Container Settings > Enable consent overview** and check that your tags show the consent they need. Google tags read the signals by themselves.
+4. For tags from other vendors, follow the next section (`cookie_consent_update` event).
+5. Test with Tag Assistant: the *Consent* tab must show the default state first, then the update after the visitor chooses.
+
+If the container is also used outside this package, remove any GTM snippet pasted in the theme or in a category so it does not load twice.
 
 ### Google Tag Manager: tags without built-in consent support
 
