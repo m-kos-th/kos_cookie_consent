@@ -157,7 +157,7 @@ class CookieConsentHelper
         $settings = $this->cookieConsent->getConsentModeSettings();
         $config = [
             'default' => $this->cookieConsent->getConsentModeDefaultState($siteId),
-            'wait_for_update' => (int) $settings['wait_for_update'],
+            'wait_for_update' => CookieConsentService::CONSENT_MODE_WAIT_FOR_UPDATE,
             'ads_data_redaction' => !empty($settings['ads_data_redaction']),
             'url_passthrough' => !empty($settings['url_passthrough']),
             'cookie' => self::CONSENT_MODE_COOKIE,

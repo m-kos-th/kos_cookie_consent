@@ -89,17 +89,6 @@ class Setting extends CookieConsent
             return $this->redirect('/dashboard/cookie_consent/setting');
         }
 
-        $waitForUpdate = trim((string) $this->post('consent_mode_wait_for_update'));
-        if ($waitForUpdate === '') {
-            $waitForUpdate = (string) CookieConsentService::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE;
-        }
-
-        if (!preg_match('/^\d+$/', $waitForUpdate) || (int) $waitForUpdate > CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE) {
-            $this->flash('error', t('Wait time must be a whole number between 0 and %s.', CookieConsentService::MAX_CONSENT_MODE_WAIT_FOR_UPDATE));
-
-            return $this->redirect('/dashboard/cookie_consent/setting');
-        }
-
         $googleTagIds = $this->kosdesign->parseGoogleTagIds((string) $this->post('consent_mode_google_tag_ids'));
         if (!empty($googleTagIds['invalid'])) {
             $this->flash('error', t('Google tag ID is not valid: %s. Use G-XXXXXXXXXX, AW-XXXXXXXXXX or GTM-XXXXXXX.', implode(', ', array_map('h', $googleTagIds['invalid']))));
@@ -110,7 +99,6 @@ class Setting extends CookieConsent
         try {
             $this->kosdesign->saveConsentModeSettings([
                 'enabled' => (bool) $this->post('consent_mode_enabled'),
-                'wait_for_update' => (int) $waitForUpdate,
                 'ads_data_redaction' => (bool) $this->post('consent_mode_ads_data_redaction'),
                 'url_passthrough' => (bool) $this->post('consent_mode_url_passthrough'),
                 'google_tag_ids' => implode(',', $googleTagIds['ids']),

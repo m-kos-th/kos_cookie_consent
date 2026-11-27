@@ -248,7 +248,6 @@ class Controller extends Package
 
         foreach ([
             'ALTER TABLE _KosCookie ADD consent_mode_types VARCHAR(255) NULL',
-            'ALTER TABLE _KosCookie ADD code_always_load TINYINT(1) NOT NULL DEFAULT 0',
         ] as $sql) {
             try {
                 $db->executeQuery($sql);
@@ -259,7 +258,6 @@ class Controller extends Package
 
         $defaults = [
             CookieConsentService::SETTING_CONSENT_MODE_ENABLED => '0',
-            CookieConsentService::SETTING_CONSENT_MODE_WAIT_FOR_UPDATE => (string) CookieConsentService::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE,
             CookieConsentService::SETTING_CONSENT_MODE_ADS_DATA_REDACTION => '1',
             CookieConsentService::SETTING_CONSENT_MODE_URL_PASSTHROUGH => '0',
         ];
@@ -276,6 +274,13 @@ class Controller extends Package
             } catch (\Throwable $e) {
                 // Settings table may not be ready; the service falls back to defaults.
             }
+        }
+
+        try {
+            // Removed option: the wait time is now fixed in code.
+            $db->executeQuery('DELETE FROM _KosCookieConsentSetting WHERE setting_key=?', ['consent_mode_wait_for_update']);
+        } catch (\Throwable $e) {
+            // Nothing to clean up.
         }
     }
 

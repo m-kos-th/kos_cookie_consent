@@ -27,12 +27,10 @@ class CookieConsentService
     const MAX_CONSENT_COOKIE_LIFETIME_DAYS = 400;
     const MANAGED_COOKIE_PATH_DEFAULT = '/';
     const SETTING_CONSENT_MODE_ENABLED = 'consent_mode_enabled';
-    const SETTING_CONSENT_MODE_WAIT_FOR_UPDATE = 'consent_mode_wait_for_update';
     const SETTING_CONSENT_MODE_ADS_DATA_REDACTION = 'consent_mode_ads_data_redaction';
     const SETTING_CONSENT_MODE_URL_PASSTHROUGH = 'consent_mode_url_passthrough';
     const SETTING_CONSENT_MODE_GOOGLE_TAG_IDS = 'consent_mode_google_tag_ids';
-    const DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE = 500;
-    const MAX_CONSENT_MODE_WAIT_FOR_UPDATE = 10000;
+    const CONSENT_MODE_WAIT_FOR_UPDATE = 500;
     const CONSENT_MODE_SIGNALS = [
         'ad_storage',
         'analytics_storage',
@@ -990,11 +988,9 @@ class CookieConsentService
     {
         return [
             'enabled' => $this->getSettingValue(self::SETTING_CONSENT_MODE_ENABLED, '0') === '1',
-            'wait_for_update' => $this->sanitizeConsentModeWaitForUpdate($this->getSettingValue(self::SETTING_CONSENT_MODE_WAIT_FOR_UPDATE, (string) self::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE)),
             'ads_data_redaction' => $this->getSettingValue(self::SETTING_CONSENT_MODE_ADS_DATA_REDACTION, '1') === '1',
             'url_passthrough' => $this->getSettingValue(self::SETTING_CONSENT_MODE_URL_PASSTHROUGH, '0') === '1',
             'google_tag_ids' => implode(', ', $this->parseGoogleTagIds($this->getSettingValue(self::SETTING_CONSENT_MODE_GOOGLE_TAG_IDS, ''))['ids']),
-            'max_wait_for_update' => self::MAX_CONSENT_MODE_WAIT_FOR_UPDATE,
         ];
     }
 
@@ -1009,7 +1005,6 @@ class CookieConsentService
     {
         $this->ensureConsentCookieSettingsTable();
         $this->saveSettingValue(self::SETTING_CONSENT_MODE_ENABLED, !empty($settings['enabled']) ? '1' : '0');
-        $this->saveSettingValue(self::SETTING_CONSENT_MODE_WAIT_FOR_UPDATE, (string) $this->sanitizeConsentModeWaitForUpdate(isset($settings['wait_for_update']) ? $settings['wait_for_update'] : self::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE));
         $this->saveSettingValue(self::SETTING_CONSENT_MODE_ADS_DATA_REDACTION, !empty($settings['ads_data_redaction']) ? '1' : '0');
         $this->saveSettingValue(self::SETTING_CONSENT_MODE_URL_PASSTHROUGH, !empty($settings['url_passthrough']) ? '1' : '0');
         $tagIds = $this->parseGoogleTagIds(isset($settings['google_tag_ids']) ? $settings['google_tag_ids'] : '');
@@ -1076,15 +1071,6 @@ class CookieConsentService
         }
 
         return $names;
-    }
-
-    public function sanitizeConsentModeWaitForUpdate($value)
-    {
-        if (!is_scalar($value) || !preg_match('/^\d+$/', trim((string) $value))) {
-            return self::DEFAULT_CONSENT_MODE_WAIT_FOR_UPDATE;
-        }
-
-        return min((int) trim((string) $value), self::MAX_CONSENT_MODE_WAIT_FOR_UPDATE);
     }
 
     /**
@@ -1413,12 +1399,11 @@ class CookieConsentService
         }
 
         try {
-            $this->db->fetchAll('SELECT consent_mode_types, code_always_load FROM ' . self::TABLE_COOKIE . ' LIMIT 1');
+            $this->db->fetchAll('SELECT consent_mode_types FROM ' . self::TABLE_COOKIE . ' LIMIT 1');
             $this->hasConsentModeColumns = true;
         } catch (\Exception $e) {
             foreach ([
                 'ALTER TABLE ' . self::TABLE_COOKIE . ' ADD consent_mode_types VARCHAR(255) NULL',
-                'ALTER TABLE ' . self::TABLE_COOKIE . ' ADD code_always_load TINYINT(1) NOT NULL DEFAULT 0',
             ] as $sql) {
                 try {
                     $this->db->executeQuery($sql);
@@ -1428,7 +1413,7 @@ class CookieConsentService
             }
 
             try {
-                $this->db->fetchAll('SELECT consent_mode_types, code_always_load FROM ' . self::TABLE_COOKIE . ' LIMIT 1');
+                $this->db->fetchAll('SELECT consent_mode_types FROM ' . self::TABLE_COOKIE . ' LIMIT 1');
                 $this->hasConsentModeColumns = true;
             } catch (\Exception $innerException) {
                 $this->hasConsentModeColumns = false;

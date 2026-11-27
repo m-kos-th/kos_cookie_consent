@@ -657,17 +657,13 @@
         <details class="kos-more">
           <summary class="kos-more__summary"><?php echo t('Advanced options'); ?></summary>
           <div class="kos-more__body">
-            <div class="kos-field">
-              <label for="consent_mode_wait_for_update"><?php echo t('Wait for visitor choice (ms)'); ?></label>
-              <input type="number" min="0" max="<?php echo (int) $_consentModeSettings['max_wait_for_update']; ?>" step="50" class="form-control" id="consent_mode_wait_for_update" name="consent_mode_wait_for_update" value="<?php echo (int) $_consentModeSettings['wait_for_update']; ?>">
-            </div>
             <div class="form-check">
               <input type="checkbox" class="form-check-input" id="consent_mode_ads_data_redaction" name="consent_mode_ads_data_redaction" value="1"<?php echo !empty($_consentModeSettings['ads_data_redaction']) ? ' checked' : ''; ?>>
-              <label class="form-check-label" for="consent_mode_ads_data_redaction"><?php echo t('Hide ad click IDs while ad cookies are denied'); ?></label>
+              <label class="form-check-label" for="consent_mode_ads_data_redaction"><?php echo t('Hide ad click IDs while ad cookies are denied'); ?> <span class="kos-badge kos-badge--signal">ads_data_redaction</span></label>
             </div>
             <div class="form-check">
               <input type="checkbox" class="form-check-input" id="consent_mode_url_passthrough" name="consent_mode_url_passthrough" value="1"<?php echo !empty($_consentModeSettings['url_passthrough']) ? ' checked' : ''; ?>>
-              <label class="form-check-label" for="consent_mode_url_passthrough"><?php echo t('Keep ad click info in page URLs'); ?></label>
+              <label class="form-check-label" for="consent_mode_url_passthrough"><?php echo t('Keep ad click info in page URLs'); ?> <span class="kos-badge kos-badge--signal">url_passthrough</span></label>
             </div>
           </div>
         </details>
