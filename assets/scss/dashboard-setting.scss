@@ -4,22 +4,91 @@
 // Naming: BEM (block__element--modifier), prefix "kos-".
 // Static variants use --modifier. States toggled by JS use .is-* (is-active, is-done, is-missing).
 
-// Variables
-$kos-color-text: #333;
-$kos-color-muted: #666;
-$kos-color-border: #dcdcdc;
-$kos-color-border-light: #e5e5e5;
-$kos-color-surface: #fff;
-$kos-color-surface-alt: #fafafa;
-$kos-color-surface-help: #f6f8fa;
-$kos-color-link: #2d7ff9;
-$kos-color-success-bg: #d9f2e1;
-$kos-color-success-text: #1b6b34;
-$kos-color-info-bg: #dbe9ff;
-$kos-color-info-text: #1b4a9c;
-$kos-color-danger-bg: #fde1e1;
-$kos-color-danger-text: #a32121;
-$kos-color-neutral-bg: #eee;
+@use 'sass:map';
+
+// Colors
+// Light values are the defaults (concrete5 8.x / Concrete 9.x before dark mode),
+// so older versions render exactly as before. Concrete 9.4+ dark mode sets
+// data-bs-theme="dark" on <html>; only then are the custom properties overridden.
+// Each var() carries its light value as fallback in case the properties are missing.
+$kos-light: (
+  'text': #333,
+  'muted': #666,
+  'border': #dcdcdc,
+  'border-light': #e5e5e5,
+  'surface': #fff,
+  'surface-alt': #fafafa,
+  'surface-help': #f6f8fa,
+  'hover': #f0f0f0,
+  'link': #2d7ff9,
+  'body-text': #555,
+  'success-bg': #d9f2e1,
+  'success-text': #1b6b34,
+  'info-bg': #dbe9ff,
+  'info-text': #1b4a9c,
+  'danger-bg': #fde1e1,
+  'danger-text': #a32121,
+  'neutral-bg': #eee,
+  'signal-bg': #f3f4f6,
+  'signal-border': #e1e3e8,
+);
+
+$kos-dark: (
+  'text': #e4e6ea,
+  'muted': #9aa0a9,
+  'border': #3d4350,
+  'border-light': #333945,
+  'surface': #1e2229,
+  'surface-alt': #252a32,
+  'surface-help': #232830,
+  'hover': #2f3540,
+  'link': #6ea8fe,
+  'body-text': #b4b9c2,
+  'success-bg': #16382a,
+  'success-text': #7fd6a0,
+  'info-bg': #1a2f55,
+  'info-text': #9bc2ff,
+  'danger-bg': #4a1f22,
+  'danger-text': #ff9a9a,
+  'neutral-bg': #333945,
+  'signal-bg': #2a2f38,
+  'signal-border': #3d4350,
+);
+
+@function kos-var($name) {
+  @return var(--kos-#{$name}, #{map.get($kos-light, $name)});
+}
+
+:root {
+  @each $name, $value in $kos-light {
+    --kos-#{$name}: #{$value};
+  }
+}
+
+[data-bs-theme='dark'],
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  @each $name, $value in $kos-dark {
+    --kos-#{$name}: #{$value};
+  }
+}
+
+$kos-color-text: kos-var('text');
+$kos-color-muted: kos-var('muted');
+$kos-color-border: kos-var('border');
+$kos-color-border-light: kos-var('border-light');
+$kos-color-surface: kos-var('surface');
+$kos-color-surface-alt: kos-var('surface-alt');
+$kos-color-surface-help: kos-var('surface-help');
+$kos-color-link: kos-var('link');
+$kos-color-success-bg: kos-var('success-bg');
+$kos-color-success-text: kos-var('success-text');
+$kos-color-info-bg: kos-var('info-bg');
+$kos-color-info-text: kos-var('info-text');
+$kos-color-danger-bg: kos-var('danger-bg');
+$kos-color-danger-text: kos-var('danger-text');
+$kos-color-neutral-bg: kos-var('neutral-bg');
 $kos-radius: 4px;
 $kos-gap: 8px;
 
@@ -87,8 +156,8 @@ $kos-gap: 8px;
   }
 
   &--signal {
-    border: 1px solid #e1e3e8;
-    background: #f3f4f6;
+    border: 1px solid #{kos-var('signal-border')};
+    background: #{kos-var('signal-bg')};
     color: $kos-color-text;
     font-family: monospace;
     font-size: 11px;
@@ -167,7 +236,7 @@ $kos-gap: 8px;
   &__body {
     margin-top: 8px;
     font-size: 13px;
-    color: #555;
+    color: #{kos-var('body-text')};
   }
 }
 
@@ -232,7 +301,7 @@ $kos-gap: 8px;
     appearance: none;
 
     &:hover {
-      background: #f0f0f0;
+      background: #{kos-var('hover')};
     }
 
     &.is-active {
@@ -368,4 +437,40 @@ $kos-gap: 8px;
 .kos-default-picker[hidden],
 .kos-hint[hidden] {
   display: none;
+}
+
+// Cookie name preset picker
+.kos-preset {
+  margin: 0 0 14px;
+
+  &__panel {
+    padding-top: 12px;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  &__code {
+    position: relative;
+    max-width: 320px;
+    margin: 0 0 10px;
+
+    pre {
+      margin: 0;
+      padding: 10px 76px 10px 12px;
+      font-size: 13px;
+    }
+
+    .btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+    }
+  }
+
+  &__msg {
+    margin-left: 8px;
+    font-size: 13px;
+  }
 }
