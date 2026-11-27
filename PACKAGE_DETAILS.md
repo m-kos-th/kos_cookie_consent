@@ -8,6 +8,8 @@
 - มีปุ่ม `Accept All`, `Reject All` และ `Save Preferences`
 - ผู้ใช้งานกลับมาแก้ค่าภายหลังได้ผ่าน `Cookie Settings`
 - โหลด tracking code เฉพาะ category ที่ได้รับ consent แล้วเท่านั้น
+- รองรับ Google Consent Mode V2 (ปิดไว้เป็นค่าเริ่มต้น เปิดได้จากหน้า Setting)
+- สร้าง category เริ่มต้นให้ 4 ตัว: Necessary, Statistics, Preferences, Marketing
 
 ## พฤติกรรมปัจจุบันของระบบ
 
@@ -84,6 +86,16 @@
 - `Consent Version`
 - เวลา `Created`
 
+## Google Consent Mode V2 (0.3.0)
+
+- เปิด/ปิดได้ที่ `/dashboard/cookie_consent/setting` การ์ด "Google Consent Mode V2" ค่าเริ่มต้นคือปิด
+- ตั้งค่าได้: เปิดใช้งาน, Google tag ID (`G-`, `AW-`, `GTM-` ใส่ได้หลายตัวคั่นด้วย comma), `ads_data_redaction`, `url_passthrough` ส่วน `wait_for_update` ตายตัว 500 ms ในโค้ด
+- แต่ละ cookie category เลือกได้ว่าควบคุม signal ไหน (`consent_mode_types`) เช่น `analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`, `functionality_storage`, `personalization_storage`, `security_storage`
+- Google tag โหลดแค่ 1 ตัวทั้งเว็บจากการตั้งค่านี้ ไม่ต้องใส่ใน tracking code ของ category (ถ้าใส่ซ้ำ หน้า Setting จะเตือน) tool ที่ไม่ใช่ Google ยังใส่ใน tracking code ของ category ตามเดิม
+- ก่อนผู้ใช้ตอบ ระบบส่ง `consent default` เป็น denied ทั้งหมด (category ที่ always-active เป็น granted) พอผู้ใช้ตอบจะส่ง `consent update` และ push event `cookie_consent_update` เข้า `dataLayer` ใช้เป็น Custom Event trigger ใน GTM ได้
+- ต้องรัน package upgrade เพื่อเพิ่มคอลัมน์ `consent_mode_types` แล้วเคลียร์ cache
+- รายละเอียดการตั้งค่า GTM และขั้นตอนทดสอบดูใน `README.md`
+
 ## เรื่องที่ทีมควรรู้ก่อนพัฒนาต่อ
 
 - source of truth ของ consent อยู่ที่ database log ไม่ใช่แค่ cookie ฝั่ง browser
@@ -94,10 +106,11 @@
 - รองรับ cookie name แบบ exact และ prefix ด้วย `*` ท้ายคำ เช่น `_ga_*`
 - third-party cookies ที่อยู่บน vendor domain อื่น และ HttpOnly cookies ยังลบจาก frontend JavaScript ไม่ได้
 - ถ้ามีการแก้ cookie definitions, tracking code หรือ popup copy ระบบอาจสร้าง consent version ใหม่และถามผู้ใช้อีกครั้ง
+- `consent_mode_types` นับเป็นส่วนของ consent version เฉพาะตอนที่ตั้งค่าไว้ ดังนั้นก่อนตั้งค่า version เดิมของผู้ใช้จะไม่เปลี่ยน
 - class ฝั่ง popup ใช้ BEM ภายใต้ `kos-cookie-popup__*` และมี class ปุ่มแบบ semantic เพิ่มไว้สำหรับ override CSS ได้ง่าย
 - ถ้าจะแก้ field ใหม่ใน popup content ต้องแก้ทั้ง schema, dashboard form, save logic, service mapping และ frontend render ให้ครบ
 
 ## สถานะปัจจุบัน
 
-- package version ปัจจุบัน: `0.2.9`
+- package version ปัจจุบัน: `0.3.0` (เพิ่ม Google Consent Mode V2)
 - โครงปัจจุบันพร้อมให้ทีมต่อยอดทั้งด้าน UI, compliance flow, export และ dashboard management

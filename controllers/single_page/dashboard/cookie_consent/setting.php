@@ -12,6 +12,12 @@ defined('C5_EXECUTE') or die('Access Denied.');
 
 class Setting extends CookieConsent
 {
+    public function on_start()
+    {
+        parent::on_start();
+        $this->addDashboardStylesheet();
+    }
+
     public function view()
     {
         $data = $this->request->query->all();
@@ -39,6 +45,70 @@ class Setting extends CookieConsent
         $this->set('_tokenDelete', $this->token->generate('cookie_consent_delete'));
         $this->set('_tokenSettings', $this->token->generate('cookie_consent_settings'));
         $this->set('_consentCookieSettings', $this->kosdesign->getConsentCookieSettings());
+        $this->set('_consentModeSettings', $this->kosdesign->getConsentModeSettings());
+        $this->set('_googleLoaderCategories', $this->kosdesign->findCategoriesWithGoogleLoader($siteid));
+        $this->set('_tokenConsentMode', $this->token->generate('cookie_consent_mode'));
+        $this->set('_tokenDefaults', $this->token->generate('cookie_consent_defaults'));
+    }
+
+    public function add_default_categories()
+    {
+        if (!$this->token->validate('cookie_consent_defaults', $this->post('token'))) {
+            $this->flash('error', $this->token->getErrorMessage());
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
+        try {
+            $result = $this->kosdesign->createDefaultCategories();
+            $messages = [];
+            if ($result['created'] > 0) {
+                $messages[] = t2('%d default category was added.', '%d default categories were added.', $result['created']);
+            }
+            if ($result['filled'] > 0) {
+                $messages[] = t2('Text was added for %d missing language entry.', 'Text was added for %d missing language entries.', $result['filled']);
+            }
+            if ($messages) {
+                $this->flash('success', implode(' ', $messages));
+            } else {
+                $this->flash('message', t('The default categories already exist.'));
+            }
+        } catch (\Throwable $e) {
+            $this->flash('error', t('Unable to add the default categories right now.'));
+        }
+
+        return $this->redirect('/dashboard/cookie_consent/setting');
+    }
+
+    public function save_consent_mode()
+    {
+        $token = $this->post('token');
+        if (!$this->token->validate('cookie_consent_mode', $token)) {
+            $this->flash('error', $this->token->getErrorMessage());
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
+        $googleTagIds = $this->kosdesign->parseGoogleTagIds((string) $this->post('consent_mode_google_tag_ids'));
+        if (!empty($googleTagIds['invalid'])) {
+            $this->flash('error', t('Google tag ID is not valid: %s. Use G-XXXXXXXXXX, AW-XXXXXXXXXX or GTM-XXXXXXX.', implode(', ', array_map('h', $googleTagIds['invalid']))));
+
+            return $this->redirect('/dashboard/cookie_consent/setting');
+        }
+
+        try {
+            $this->kosdesign->saveConsentModeSettings([
+                'enabled' => (bool) $this->post('consent_mode_enabled'),
+                'ads_data_redaction' => (bool) $this->post('consent_mode_ads_data_redaction'),
+                'url_passthrough' => (bool) $this->post('consent_mode_url_passthrough'),
+                'google_tag_ids' => implode(',', $googleTagIds['ids']),
+            ]);
+            $this->flash('success', t('Consent Mode settings saved.'));
+        } catch (\Throwable $e) {
+            $this->flash('error', t('Unable to save Consent Mode settings right now.'));
+        }
+
+        return $this->redirect('/dashboard/cookie_consent/setting');
     }
 
     public function save_preferences()
@@ -133,12 +203,14 @@ class Setting extends CookieConsent
     {
         $this->set('_type', 'add');
         $this->set('_token', $this->token->generate('cookie_consent_add'));
+        $this->set('_consentModeSignals', $this->kosdesign->getConsentModeSignals());
     }
 
     public function edit($id = null)
     {
         $this->set('_type', 'edit');
         $this->set('_token', $this->token->generate('cookie_consent_edit'));
+        $this->set('_consentModeSignals', $this->kosdesign->getConsentModeSignals());
 
         if ($id === null) {
             return $this->redirect($this->kosdesign->getLink());
@@ -163,6 +235,7 @@ class Setting extends CookieConsent
         $managedCookieNamesRaw = isset($post['managed_cookie_names']) ? (string) $post['managed_cookie_names'] : '';
         $managedCookieDomainRaw = isset($post['managed_cookie_domain']) ? (string) $post['managed_cookie_domain'] : '';
         $managedCookiePathRaw = isset($post['managed_cookie_path']) ? (string) $post['managed_cookie_path'] : CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT;
+        $consentModeTypes = $this->kosdesign->sanitizeConsentModeTypes(isset($post['consent_mode_types']) ? $post['consent_mode_types'] : []);
 
         if (($id === null && !$this->token->validate('cookie_consent_add', $postedToken)) || ($id !== null && !$this->token->validate('cookie_consent_edit', $postedToken))) {
             $this->error->add($this->token->getErrorMessage());
@@ -209,6 +282,7 @@ class Setting extends CookieConsent
                 $this->set('id', $id);
             }
             $this->set('_token', $this->token->generate($id !== null ? 'cookie_consent_edit' : 'cookie_consent_add'));
+            $this->set('_consentModeSignals', $this->kosdesign->getConsentModeSignals());
             $this->set('error', $this->error);
             return;
         }
@@ -243,13 +317,13 @@ class Setting extends CookieConsent
             }
 
             if ($id !== null) {
-                $saved = $this->kosdesign->DBUpdateCookie($id, $name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath);
+                $saved = $this->kosdesign->DBUpdateCookie($id, $name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes);
                 if (!$saved) {
                     throw new Exception('Can not update cookie. Please try again.');
                 }
                 $cookieId = $id;
             } else {
-                $cookieId = $this->kosdesign->DBInsertCookie($name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath);
+                $cookieId = $this->kosdesign->DBInsertCookie($name, $active, $always, $header, $body, $footer, $siteId, $sortOrder, $managedCookieNames, $managedCookieDomain, $managedCookiePath, $consentModeTypes);
                 if ($cookieId === null) {
                     throw new Exception('Can not create cookie. Please try again.');
                 }
@@ -319,24 +393,24 @@ class Setting extends CookieConsent
 
             $hasManagedCookies = true;
             if (substr_count($cookiePattern, '*') > 1 || (strpos($cookiePattern, '*') !== false && substr($cookiePattern, -1) !== '*')) {
-                $this->error->add(t('Managed cookie rule line %s is invalid. Use an exact cookie name or a prefix ending with *.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names is not valid. Use a cookie name, or a name ending with *.', $index + 1));
                 continue;
             }
 
             $cookieName = substr($cookiePattern, -1) === '*' ? substr($cookiePattern, 0, -1) : $cookiePattern;
             $cookieName = trim((string) $cookieName);
             if ($cookieName === '') {
-                $this->error->add(t('Managed cookie rule line %s is invalid.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names is not valid.', $index + 1));
                 continue;
             }
 
             if (!preg_match("/^[!#$%&'\\+\\-.\\^_`|~0-9A-Za-z]+$/", $cookieName)) {
-                $this->error->add(t('Managed cookie rule line %s contains unsupported characters for a cookie name.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names has characters a cookie name cannot contain.', $index + 1));
                 continue;
             }
 
             if (in_array($cookieName, $reservedCookieNames, true)) {
-                $this->error->add(t('Managed cookie rule line %s cannot target the consent cookies required by this package.', $index + 1));
+                $this->error->add(t('Line %s of Cookie names is a cookie this package needs. Remove it.', $index + 1));
             }
         }
 
@@ -346,12 +420,12 @@ class Setting extends CookieConsent
 
         $rawDomain = trim((string) $managedCookieDomainRaw);
         if ($rawDomain !== '' && $this->kosdesign->sanitizeManagedCookieDomain($rawDomain) === '') {
-            $this->error->add(t('Managed cookie domain must be a hostname only, without protocol or path.'));
+            $this->error->add(t('Cookie domain must be a domain name only, for example example.com.'));
         }
 
         $rawPath = trim((string) $managedCookiePathRaw);
         if ($rawPath !== '' && $this->kosdesign->sanitizeManagedCookiePath($rawPath) === CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT && $rawPath !== CookieConsentService::MANAGED_COOKIE_PATH_DEFAULT) {
-            $this->error->add(t('Managed cookie path must start with /.'));
+            $this->error->add(t('Cookie path must start with /.'));
         }
     }
 

@@ -21,6 +21,23 @@ class CookieConsent extends DashboardPageController
         $this->kosdesign->setLink();
     }
 
+    /**
+     * Load a compiled dashboard stylesheet from assets/css (source in assets/scss).
+     *
+     * @param string $name File name without extension, e.g. "dashboard-setting"
+     */
+    protected function addDashboardStylesheet($name = 'dashboard-setting')
+    {
+        try {
+            $pkg = $this->app->make('Concrete\\Core\\Package\\PackageService')->getClass('kos_cookie_consent');
+            if ($pkg) {
+                $this->addHeaderItem('<link rel="stylesheet" href="' . h($pkg->getRelativePath()) . '/assets/css/' . h($name) . '.css?v=' . h($pkg->getPackageVersion()) . '">');
+            }
+        } catch (\Throwable $e) {
+            // Styling is cosmetic; never block the dashboard page.
+        }
+    }
+
     public function view()
     {
         return $this->redirect('/dashboard/cookie_consent/logs');

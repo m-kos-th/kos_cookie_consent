@@ -7,7 +7,8 @@ This file is the quickest technical handoff for engineers or AI assistants worki
 - Handle: `kos_cookie_consent`
 - Namespace root: `Concrete\Package\KosCookieConsent`
 - Main controller: `controller.php`
-- Current package version: `0.2.9`
+- Current package version: `0.3.0` (adds Google Consent Mode V2)
+- Target runtime: concrete5 `8.5.7` / PHP `7.4` (`appVersionRequired` = `8.5.0`; keep code free of PHP 8-only syntax)
 
 ## Key Paths
 
@@ -336,3 +337,15 @@ If frontend styling changes in the theme, keep package markup stable where possi
 - Changing popup copy causes a new consent version
 - Logs page shows consent ID, IP, version, and correct per-cookie states
 - CSV export matches logs page output
+
+## Google Consent Mode V2 (0.3.0)
+
+- Dashboard: `/dashboard/cookie_consent/setting` -> "Google Consent Mode V2" card (enable, Google tag ID, `ads_data_redaction`, `url_passthrough`; `wait_for_update` is fixed at 500 in code and is not stored). Settings live in `_KosCookieConsentSetting` (`consent_mode_*` keys), default OFF.
+- Per category (add/edit cookie): `consent_mode_types` (CSV of `ad_storage`, `analytics_storage`, `ad_user_data`, `ad_personalization`, `functionality_storage`, `personalization_storage`, `security_storage`). Google loaders go in the global Google tag ID setting, not in a category; category codes always wait for consent.
+- Global Google tag: setting `consent_mode_google_tag_ids` (CSV, validated by `CookieConsentService::parseGoogleTagIds()`: `G-`, `AW-`, `GTM-`). `CookieConsentHelper::renderGoogleTagScript()` prints the GTM / gtag.js loader right after the default script (only while Consent Mode V2 is on). `findCategoriesWithGoogleLoader()` drives the "tag would load twice" warning on the Settings page. Non-Google tools stay in category tracking codes.
+- Default categories: Necessary, Statistics, Preferences (`personalization_storage`), Marketing (`getDefaultCategoryDefinitions()`).
+- Head: `CookieConsentHelper::renderConsentModeDefaultScript()` prints `gtag('consent','default', ...)` (all denied; always-active categories granted) via `addHeaderItem`, then restores the last state from the `kos_consent_mode` cookie. It must come before any gtag/GTM loader; hard-coded tags placed before `header_required` in the theme cannot be reordered by the package.
+- API: `state` and `save` responses include `consent_mode: {enabled, saved, state}`.
+- JS: `applyConsentMode()` calls `gtag('consent','update', state)`, pushes `{event: 'cookie_consent_update', cookie_consent_saved, cookie_consent_state}` to `dataLayer` (vendor-neutral name so clients can use it as a GTM Custom Event trigger), and stores the state in `kos_consent_mode` (granted/denied only).
+- `consent_mode_types` is part of the consent version only when set, so existing versions do not change until configured.
+- Upgrade: run package upgrade (`db.xml` + `ensureConsentModeColumns()` add the columns), then clear cache.

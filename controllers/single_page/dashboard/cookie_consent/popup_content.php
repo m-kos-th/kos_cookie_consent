@@ -11,6 +11,12 @@ class PopupContent extends CookieConsent
 {
     const TOKEN_ACTION = 'cookie_consent_popup_content_save';
 
+    public function on_start()
+    {
+        parent::on_start();
+        $this->addDashboardStylesheet();
+    }
+
     public function view()
     {
         $this->set('popupContentLanguages', $this->kosdesign->getSiteLanguage());
