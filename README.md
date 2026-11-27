@@ -14,6 +14,7 @@ For a deeper engineering map, see [CONTEXT.md](CONTEXT.md).
 - Tracking code is injected only for consented categories.
 - Saved visitors get a `Cookie Settings` entry point to reopen the modal later.
 - Cookie categories can define first-party cookies to clear when consent is withdrawn.
+- Optional Google Consent Mode V2 (off by default): sends `consent default`/`consent update` to `gtag`, loads one global Google tag, and maps each category to Consent Mode signals. See [Google Consent Mode V2](#google-consent-mode-v2).
 
 ## Consent Model
 
@@ -204,7 +205,7 @@ The `state` response is sent with `no-store` headers to reduce cache-related con
 
 ## Upgrade Notes
 
-- Current package version: `0.2.9`
+- Current package version: `0.3.0`
 - Run package upgrade after deploying package code changes.
 - Clear Concrete CMS cache after upgrade.
 - Existing legacy IP-based rows can be adopted into the new `consent_id` model on first fresh lookup, but new saves should always use `consent_id`.
